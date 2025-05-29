@@ -1,3 +1,4 @@
 .env
+venv/
 CONTEXT.md
 dummy_java_projects/
