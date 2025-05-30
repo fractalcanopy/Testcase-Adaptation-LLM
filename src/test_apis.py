@@ -4,12 +4,11 @@ import google.generativeai as genai
 import requests
 
 
-def test_gemini_api(gemini_api_key):
+def test_gemini_api(gemini_api_key, prompt="Explain how AI works in simple terms."):
     genai.configure(api_key=gemini_api_key)
 
     # Example usage (refer to Gemini API docs)
     model = genai.GenerativeModel("gemini-2.0-flash")  # Or other suitable model
-    prompt = "Explain how AI works in simple terms."
     response = model.generate_content(prompt)
     print(response.text)
 
