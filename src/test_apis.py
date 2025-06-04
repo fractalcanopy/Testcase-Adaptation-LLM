@@ -10,7 +10,7 @@ def test_gemini_api(gemini_api_key, prompt="Explain how AI works in simple terms
     # Example usage (refer to Gemini API docs)
     model = genai.GenerativeModel("gemini-2.0-flash")  # Or other suitable model
     response = model.generate_content(prompt)
-    print(response.text)
+    print(response)
 
 
 def test_perplexity_api(perplexity_api_key):

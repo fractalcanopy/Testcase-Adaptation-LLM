@@ -1,4 +1,8 @@
 from utils import parse_maven_error
+from llm_analyzer import construct_llm_prompt
+from dotenv import load_dotenv
+import os
+from test_apis import test_gemini_api
 
 print("--- Testing parse_maven_error function ---")
 sample_error_output = r"""Picked up JAVA_TOOL_OPTIONS: --enable-native-access=ALL-UNNAMED
@@ -78,5 +82,42 @@ WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
 [ERROR] For more information about the errors and possible solutions, please read the following articles:
 [ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException"""
 parsed_error = parse_maven_error(sample_error_output)
-print("--- Parsed Maven Error ---")
-print(parsed_error)
+
+test_case_code = r"""package com.example;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+public class CalculatorTest {
+
+    @Test
+    void testAdd() {
+        Calculator calculator = new Calculator();
+        assertEquals(5, calculator.add(2, 3), "2 + 3 should equal 5");
+    }
+
+    @Test
+    void testAddNegative() {
+        Calculator calculator = new Calculator();
+        assertEquals(-1, calculator.add(-2, 1), "-2 + 1 should equal -1");
+    }
+}"""
+
+target_class_code = r"""public class Calculator {
+    // Method renamed from 'add' to 'sum'
+    public int sum(int a, int b) {
+        return a + b;
+    }
+}"""
+
+
+constructed_prompt = construct_llm_prompt(
+    test_case_code,
+    parsed_error,
+    target_class_code,
+    "Calculator.java",
+)
+
+load_dotenv()
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+test_gemini_api(gemini_api_key, constructed_prompt)

@@ -1,11 +1,12 @@
 import os
 from dotenv import load_dotenv
 
+
 def construct_llm_prompt(
     original_test_case_code: str,
     parsed_build_error: str,
     target_class_code: str,
-    target_class_name: str = "the relevant class" # Optional: to make the prompt more specific
+    target_class_name: str = "the relevant class",  # Optional: to make the prompt more specific
 ) -> str:
     """
     Assembles a structured prompt for an LLM to suggest fixes for a failing Java test case.
@@ -38,11 +39,12 @@ Here is the relevant code from the target project's {target_class_name}:
 Please analyze the build error in the context of the provided test case and target class code.
 Suggest specific modifications to the *test case code only* to fix the build error and make it compatible with the target project's class.
 Explain your reasoning for the suggested changes.
-Provide the modified test case code.
+Provide ONLY the modified test case code.
 """
     return prompt
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Example Usage:
     sample_test_case = """
 package com.example;
@@ -80,7 +82,7 @@ public class Calculator {
         original_test_case_code=sample_test_case,
         parsed_build_error=sample_error,
         target_class_code=sample_target_class_code,
-        target_class_name="Calculator.java"
+        target_class_name="Calculator.java",
     )
     print("--- Generated LLM Prompt ---")
     print(generated_prompt)
@@ -88,8 +90,10 @@ public class Calculator {
     # Example using the parse_maven_error function from utils.py
     # This assumes utils.py is in the same directory or accessible via PYTHONPATH
     try:
-        from utils import parse_maven_error # Assuming utils.py is in the same directory for this example
-        
+        from utils import (
+            parse_maven_error,
+        )  # Assuming utils.py is in the same directory for this example
+
         # A more complete error message string
         full_error_output = """
 [INFO] Scanning for projects...
@@ -104,7 +108,7 @@ public class Calculator {
 [INFO] -------------------------------------------------------------
         """
         parsed_error_dict = parse_maven_error(full_error_output)
-        
+
         # Construct a more specific error string for the prompt from the parsed dictionary
         if parsed_error_dict.get("error_type") == "cannot find symbol":
             error_for_prompt = (
@@ -112,13 +116,15 @@ public class Calculator {
                 f"Location: {parsed_error_dict.get('location')}"
             )
         else:
-            error_for_prompt = parsed_error_dict.get("raw_message", "No specific error message parsed.")
+            error_for_prompt = parsed_error_dict.get(
+                "raw_message", "No specific error message parsed."
+            )
 
         generated_prompt_with_parsed_error = construct_llm_prompt(
             original_test_case_code=sample_test_case,
             parsed_build_error=error_for_prompt,
             target_class_code=sample_target_class_code,
-            target_class_name="Calculator.java"
+            target_class_name="Calculator.java",
         )
         print("\n--- Generated LLM Prompt (with error parsed from utils) ---")
         print(generated_prompt_with_parsed_error)
@@ -130,5 +136,9 @@ public class Calculator {
         test_gemini_api(gemini_api_key, generated_prompt_with_parsed_error)"""
 
     except ImportError:
-        print("\nCould not import parse_maven_error from utils.py for the second example.")
-        print("Ensure utils.py is in the correct path or run this script from the 'src' directory.")
+        print(
+            "\nCould not import parse_maven_error from utils.py for the second example."
+        )
+        print(
+            "Ensure utils.py is in the correct path or run this script from the 'src' directory."
+        )
