@@ -1,7 +1,12 @@
 import os
 import re
 
-def save_java_test_to_target(java_code_string: str, test_filename: str, target_project_root: str = "data/target_project"):
+
+def save_java_test_to_target(
+    java_code_string: str,
+    test_filename: str,
+    target_project_root: str = "data/target_project",
+):
     """
     Saves a string of Java test code as a .java file into a 'test' subdirectory
     of the specified target project root.
@@ -32,6 +37,7 @@ def save_java_test_to_target(java_code_string: str, test_filename: str, target_p
     except IOError as e:
         print(f"Error saving Java test case: {e}")
 
+
 def parse_maven_error(error_output: str) -> dict:
     """
     Parses Maven error output to extract key error information.
@@ -53,7 +59,7 @@ def parse_maven_error(error_output: str) -> dict:
         r"\[ERROR\]\s*symbol:\s*(method|variable|class|interface|package)\s*([^\n\r]*)\s*\n"
         r"\[ERROR\]\s*location:\s*([^\n\r]*)",
         error_output,
-        re.MULTILINE
+        re.MULTILINE,
     )
     if cannot_find_symbol_match:
         return {
@@ -61,7 +67,7 @@ def parse_maven_error(error_output: str) -> dict:
             "symbol_type": cannot_find_symbol_match.group(1).strip(),
             "symbol_name": cannot_find_symbol_match.group(2).strip(),
             "location": cannot_find_symbol_match.group(3).strip(),
-            "raw_message": cannot_find_symbol_match.group(0)
+            "raw_message": cannot_find_symbol_match.group(0),
         }
 
     # Regex for "method X in class Y cannot be applied to given types"
@@ -71,7 +77,7 @@ def parse_maven_error(error_output: str) -> dict:
         r"\[ERROR\]\s*found:\s*([^\n\r]*)\s*\n"
         r"\[ERROR\]\s*reason:\s*([^\n\r]*)",
         error_output,
-        re.MULTILINE
+        re.MULTILINE,
     )
     if method_not_applicable_match:
         return {
@@ -82,15 +88,21 @@ def parse_maven_error(error_output: str) -> dict:
             "required_params": method_not_applicable_match.group(4).strip(),
             "found_params": method_not_applicable_match.group(5).strip(),
             "reason": method_not_applicable_match.group(6).strip(),
-            "raw_message": method_not_applicable_match.group(0)
+            "raw_message": method_not_applicable_match.group(0),
         }
 
     # General [ERROR] message capture if no specific pattern matched above
     # This looks for the first significant [ERROR] line that doesn't look like a path
-    general_error_match = re.search(r"\[ERROR\] ([A-Za-z].*)$", error_output, re.MULTILINE)
+    general_error_match = re.search(
+        r"\[ERROR\] ([A-Za-z].*)$", error_output, re.MULTILINE
+    )
     if general_error_match:
         # Attempt to find a more specific error message if it's a common Maven one
-        mojo_failure_match = re.search(r"\[ERROR\] Failed to execute goal .*:(.*) \((.*)\) on project (.*): (.*) -> \[Help 1\]", error_output, re.MULTILINE)
+        mojo_failure_match = re.search(
+            r"\[ERROR\] Failed to execute goal .*:(.*) \((.*)\) on project (.*): (.*) -> \[Help 1\]",
+            error_output,
+            re.MULTILINE,
+        )
         if mojo_failure_match:
             return {
                 "error_type": "maven_mojo_failure",
@@ -98,25 +110,85 @@ def parse_maven_error(error_output: str) -> dict:
                 "mojo": mojo_failure_match.group(2).strip(),
                 "project": mojo_failure_match.group(3).strip(),
                 "message": mojo_failure_match.group(4).strip(),
-                "raw_message": mojo_failure_match.group(0)
+                "raw_message": mojo_failure_match.group(0),
             }
         return {
             "error_type": "general_error",
             "message": general_error_match.group(1).strip(),
-            "raw_message": general_error_match.group(0)
+            "raw_message": general_error_match.group(0),
         }
-        
+
     # Fallback for non-compilation errors from java_env_manager itself
-    if "Error: Project directory" in error_output or "Error: Maven command" in error_output or "An unexpected error occurred" in error_output:
+    if (
+        "Error: Project directory" in error_output
+        or "Error: Maven command" in error_output
+        or "An unexpected error occurred" in error_output
+    ):
         return {
             "error_type": "environment_error",
             "message": error_output.strip(),
-            "raw_message": error_output.strip()
+            "raw_message": error_output.strip(),
         }
 
-    return {"error_type": "unknown", "message": "Could not parse a specific error message.", "raw_message": error_output[:500]} # Return first 500 chars if unknown
+    return {
+        "error_type": "unknown",
+        "message": "Could not parse a specific error message.",
+        "raw_message": error_output[:500],
+    }  # Return first 500 chars if unknown
 
-if __name__ == '__main__':
+
+def extract_java_code_from_llm_response(llm_response: str) -> str | None:
+    """
+    Extracts a Java code block from the LLM's raw text response.
+    Assumes the Java code is enclosed in ```java ... ``` or ``` ... ```.
+
+    Args:
+        llm_response (str): The raw text response from the LLM.
+
+    Returns:
+        str | None: The extracted Java code string, or None if no block is found.
+    """
+    # Try to find ```java ... ```
+    match = re.search(r"```java\s*([\s\S]*?)\s*```", llm_response, re.MULTILINE)
+    if match:
+        return match.group(1).strip()
+
+    # If not found, try to find ``` ... ``` (generic code block)
+    # This is less specific, so it's a fallback.
+    match = re.search(r"```\s*([\s\S]*?)\s*```", llm_response, re.MULTILINE)
+    if match:
+        # Basic check to see if it looks like Java (e.g., contains "public class")
+        # This is a heuristic and might not be perfect.
+        potential_code = match.group(1).strip()
+        if (
+            "public class" in potential_code
+            or "package" in potential_code
+            or "@Test" in potential_code
+        ):
+            return potential_code
+
+    # If still no specific Java block, look for any code block and assume it might be Java
+    # if it contains typical Java keywords. This is a broader fallback.
+    if (
+        "public class" in llm_response
+        or "package" in llm_response
+        or "@Test" in llm_response
+    ):
+        # Attempt to find the first occurrence of a code block if the LLM output is *only* code
+        # This is a very simple heuristic for cases where the LLM might just return code without backticks.
+        # It's risky and should be used with caution.
+        # A more robust way would be to rely on the LLM always using markdown.
+        # For now, we prioritize markdown blocks.
+        # If the response starts with "package" or "public class" and has no backticks,
+        # we might assume the whole response is the code. This is highly dependent on LLM behavior.
+        # Given the example, the LLM *does* use backticks.
+        pass  # Sticking to backtick extraction for now as per the example.
+
+    print("Could not extract Java code block from LLM response.")
+    return None
+
+
+if __name__ == "__main__":
     # Example Usage:
     sample_java_test_code = """
 package com.example.test;
@@ -221,3 +293,61 @@ public class MySimpleTest {
     """
     parsed_method_error = parse_maven_error(method_not_applicable_error)
     print(f"Parsed Method Not Applicable Error: {parsed_method_error}")
+
+    print("\n--- Testing LLM response parsing ---")
+    sample_llm_response_java = """
+Some introductory text.
+```java
+package com.example;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+public class CalculatorTest {
+
+    @Test
+    void testAdd() {
+        Calculator calculator = new Calculator();
+        assertEquals(5, calculator.sum(2, 3), "2 + 3 should equal 5");
+    }
+}
+```
+Some concluding text.
+    """
+    extracted_code = extract_java_code_from_llm_response(sample_llm_response_java)
+    print(f"Extracted Java code:\n{extracted_code}")
+
+    sample_llm_response_generic = """
+The LLM says:
+```
+public class MyClass {
+    // some java like code
+}
+```
+That's the suggestion.
+    """
+    extracted_code_generic = extract_java_code_from_llm_response(
+        sample_llm_response_generic
+    )
+    print(f"\nExtracted generic code (as Java):\n{extracted_code_generic}")
+
+    sample_llm_response_no_code = "This is just some text without a code block."
+    extracted_code_no_code = extract_java_code_from_llm_response(
+        sample_llm_response_no_code
+    )
+    print(f"\nExtracted from no code response: {extracted_code_no_code}")
+
+    sample_llm_response_only_code_in_java_block = """```java
+package com.example;
+
+public class OnlyTest {
+    @Test
+    void simpleTest() {
+        assertEquals(1, 1);
+    }
+}
+```"""
+    extracted_only_code = extract_java_code_from_llm_response(
+        sample_llm_response_only_code_in_java_block
+    )
+    print(f"\nExtracted from only code in java block:\n{extracted_only_code}")

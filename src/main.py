@@ -1,7 +1,11 @@
 import os
 from dotenv import load_dotenv
 
-from utils import save_java_test_to_target, parse_maven_error
+from utils import (
+    save_java_test_to_target,
+    parse_maven_error,
+    extract_java_code_from_llm_response,
+)
 from java_env_manager import invoke_maven_build
 from llm_analyzer import construct_llm_prompt
 from test_apis import test_gemini_api
@@ -69,7 +73,7 @@ def main(
     # We need to extract the package path from the original test case to place it correctly.
     # This is a simplification; a robust solution would parse the package statement.
     # For now, we assume the test file is named correctly and save_java_test_to_target handles the path.
-    # The current save_java_test_to_target saves to `target_project_root/test/TestFile.java`.
+    # The current save_java_test_to_target saves to `target_project_root/test/filename.java`.
     # This needs to be `target_project_path/src/test/java/com/example/TestFile.java` for Maven.
     # Let's adjust how we call save_java_test_to_target or modify it.
     # For simplicity, we'll assume `save_java_test_to_target` is good enough for now,
@@ -226,6 +230,58 @@ def main(
         print("--------------------------------------------------")
         print(llm_suggestion)
         print("--------------------------------------------------")
+
+        # Step I: Extract code from LLM response
+        print("\nStep I: Extracting Java code from LLM suggestion...")
+        suggested_java_code = extract_java_code_from_llm_response(llm_suggestion)
+
+        if suggested_java_code:
+            print("Successfully extracted Java code from LLM response.")
+            # print(f"--- Suggested Code ---\n{suggested_java_code}\n----------------------") # For debugging
+
+            # Step J: Apply LLM suggestion and re-build
+            print(
+                f"\nStep J: Applying LLM suggestion to '{target_test_file_full_path}' and re-building..."
+            )
+            try:
+                with open(target_test_file_full_path, "w", encoding="utf-8") as f:
+                    f.write(suggested_java_code)
+                print(
+                    f"Successfully updated test file with LLM suggestion: {target_test_file_full_path}"
+                )
+
+                # Re-invoke Maven build
+                print(
+                    f"Attempting to build target project '{target_project_path}' with applied suggestion..."
+                )
+                return_code_after_fix, stdout_after_fix, stderr_after_fix = (
+                    invoke_maven_build(target_project_path)
+                )
+                print(
+                    f"Maven build return code after applying suggestion: {return_code_after_fix}"
+                )
+
+                if stderr_after_fix:
+                    print(
+                        f"Maven STDERR after applying suggestion:\n{stderr_after_fix}"
+                    )
+
+                if return_code_after_fix == 0:
+                    print("\nLLM suggestion successfully fixed the build!")
+                else:
+                    print("\nBuild still fails after applying LLM suggestion.")
+                    # Optionally, parse the new error:
+                    # new_parsed_error = parse_maven_error(stderr_after_fix if stderr_after_fix else stdout_after_fix)
+                    # print(f"New parsed error: {new_parsed_error}")
+
+            except IOError as e:
+                print(f"Error writing suggested Java code to file: {e}")
+            except Exception as e:
+                print(
+                    f"An unexpected error occurred during suggestion application or re-build: {e}"
+                )
+        else:
+            print("No Java code block found in LLM suggestion. Cannot apply fix.")
 
     print(f"\n--- Test Adaptation Workflow Finished ---")
 
