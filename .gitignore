@@ -3,3 +3,4 @@ venv/
 dummy_java_projects/
 **/__pycache__/
 *.pyc
+data/testcaseTargetUUTPairMatching.csv
