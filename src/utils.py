@@ -1,5 +1,6 @@
 import os
 import re
+import requests
 
 
 def save_java_test_to_target(
@@ -188,6 +189,43 @@ def extract_java_code_from_llm_response(llm_response: str) -> str | None:
     return None
 
 
+def get_code_from_github(
+    owner_repo: str, commit_sha: str, file_path: str
+) -> str | None:
+    """
+    Fetches the raw content of a specific file from a GitHub repository at a specific commit.
+
+    Args:
+        owner_repo (str): The repository owner and name (e.g., "owner/repo").
+        commit_sha (str): The commit SHA.
+        file_path (str): The path to the file within the repository.
+
+    Returns:
+        str | None: The content of the file as a string, or None if an error occurs.
+    """
+    # Basic validation for owner/repo format
+    if "/" not in owner_repo or len(owner_repo.split("/")) != 2:
+        print(f"Error: Invalid owner/repo format: {owner_repo}. Expected 'owner/repo'.")
+        return None
+
+    # Construct the raw content URL
+    raw_url = f"https://raw.githubusercontent.com/{owner_repo.strip('/')}/{commit_sha}/{file_path}"
+
+    try:
+        response = requests.get(raw_url)
+        response.raise_for_status()  # Raises an HTTPError for bad responses (4xx or 5xx)
+        return response.text
+    except requests.exceptions.HTTPError as e:
+        print(
+            f"Error fetching file from GitHub: {e.response.status_code} {e.response.reason}"
+        )
+        print(f"URL: {raw_url}")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred while requesting the file from GitHub: {e}")
+        return None
+
+
 if __name__ == "__main__":
     # Example Usage:
     sample_java_test_code = """
@@ -351,3 +389,13 @@ public class OnlyTest {
         sample_llm_response_only_code_in_java_block
     )
     print(f"\nExtracted from only code in java block:\n{extracted_only_code}")
+
+    print("\n--- Testing GitHub code fetching ---")
+    # Example GitHub raw file URL (this will not work here as it's a live request)
+    owner_repo = "mkouba/rewrite"
+    commit_sha = "fd31001808dc4c1869f43cbdb09f64b6"
+    file_path = "config-servlet-tests/src/test/java/org/ocpsoft/rewrite/servlet/config/RequestParameterTest.java"
+
+    # This is just an example, it won't actually fetch in this environment
+    fetched_code = get_code_from_github(owner_repo, commit_sha, file_path)
+    print(f"Fetched code from GitHub:\n{fetched_code}")
