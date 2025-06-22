@@ -7,6 +7,8 @@ def construct_llm_prompt(
     parsed_build_error: str,
     target_class_code: str,
     target_class_name: str = "the relevant class",  # Optional: to make the prompt more specific
+    build_file_content: str | None = None,
+    build_file_name: str = "build file",
 ) -> str:
     """
     Assembles a structured prompt for an LLM to suggest fixes for a failing Java test case.
@@ -17,6 +19,8 @@ def construct_llm_prompt(
         target_class_code (str): The source code of the relevant class(es) in the target project.
         target_class_name (str, optional): The name of the target class, for a more specific prompt.
                                            Defaults to "the relevant class".
+        build_file_content (str | None, optional): The content of the build file (e.g., pom.xml). Defaults to None.
+        build_file_name (str, optional): The name of the build file. Defaults to "build file".
 
     Returns:
         str: A formatted prompt string for the LLM.
@@ -35,10 +39,25 @@ Here is the relevant code from the target project's {target_class_name}:
 ```java
 {target_class_code}
 ```
----
-Please analyze the build error in the context of the provided test case and target class code.
+"""
+    if build_file_content:
+        lang = (
+            "xml"
+            if "pom.xml" in build_file_name.lower()
+            else "groovy"
+            if "build.gradle" in build_file_name.lower()
+            else ""
+        )
+        prompt += f"""---
+Here is the content of the target project's build file ({build_file_name}):
+```{lang}
+{build_file_content}
+```
+"""
+
+    prompt += """---
+Please analyze the build error in the context of the provided test case, target class code, and build file.
 Suggest specific modifications to the *test case code only* to fix the build error and make it compatible with the target project's class.
-Explain your reasoning for the suggested changes.
 Provide ONLY the modified test case code.
 """
     return prompt
@@ -78,11 +97,31 @@ public class Calculator {
     }
 }
 """
+
+    sample_pom_xml = """
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>project-b</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <!-- This version might be different from the one the test was written for -->
+            <version>5.8.2</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
+"""
     generated_prompt = construct_llm_prompt(
         original_test_case_code=sample_test_case,
         parsed_build_error=sample_error,
         target_class_code=sample_target_class_code,
         target_class_name="Calculator.java",
+        build_file_content=sample_pom_xml,
+        build_file_name="pom.xml",
     )
     print("--- Generated LLM Prompt ---")
     print(generated_prompt)
@@ -125,6 +164,8 @@ public class Calculator {
             parsed_build_error=error_for_prompt,
             target_class_code=sample_target_class_code,
             target_class_name="Calculator.java",
+            build_file_content=sample_pom_xml,
+            build_file_name="pom.xml",
         )
         print("\n--- Generated LLM Prompt (with error parsed from utils) ---")
         print(generated_prompt_with_parsed_error)

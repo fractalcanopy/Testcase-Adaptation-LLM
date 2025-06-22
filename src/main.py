@@ -183,6 +183,17 @@ def main(
 
         target_class_name_for_prompt = os.path.basename(target_class_full_path)
 
+        # Step E.1: Read build file (e.g., pom.xml)
+        print("\nStep E.1: Reading build file...")
+        build_file_path = os.path.join(target_project_path, "pom.xml")
+        build_file_content = read_file_content(build_file_path)
+        build_file_name = os.path.basename(build_file_path)
+        if build_file_content is None:
+            print(
+                f"Could not read build file at {build_file_path}. Proceeding without it."
+            )
+            build_file_name = "build file"  # Reset name if not found
+
         # Step F: Construct LLM prompt
         print("\nStep F: Constructing LLM prompt...")
         llm_prompt = construct_llm_prompt(
@@ -190,6 +201,8 @@ def main(
             parsed_build_error=error_for_prompt,
             target_class_code=target_class_code,
             target_class_name=target_class_name_for_prompt,
+            build_file_content=build_file_content,
+            build_file_name=build_file_name,
         )
         # print(f"--- Generated LLM Prompt ---\n{llm_prompt}\n--------------------------") # For debugging
 
