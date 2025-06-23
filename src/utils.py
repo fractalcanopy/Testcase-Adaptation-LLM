@@ -190,15 +190,18 @@ def extract_java_code_from_llm_response(llm_response: str) -> str | None:
 
 
 def get_code_from_github(
-    owner_repo: str, commit_sha: str, file_path: str
+    owner_repo: str, file_path: str, commit_sha: str | None = None
 ) -> str | None:
     """
-    Fetches the raw content of a specific file from a GitHub repository at a specific commit.
+    Fetches the raw content of a specific file from a GitHub repository.
+    If a commit SHA or branch name is provided, it fetches that specific version.
+    If `commit_sha` is None, it fetches the version from the repository's default branch.
 
     Args:
         owner_repo (str): The repository owner and name (e.g., "owner/repo").
-        commit_sha (str): The commit SHA.
         file_path (str): The path to the file within the repository.
+        commit_sha (str | None, optional): The commit SHA or branch name.
+                                           Defaults to None (latest from default branch).
 
     Returns:
         str | None: The content of the file as a string, or None if an error occurs.
@@ -208,10 +211,42 @@ def get_code_from_github(
         print(f"Error: Invalid owner/repo format: {owner_repo}. Expected 'owner/repo'.")
         return None
 
+    ref_to_use = commit_sha
+
+    if not ref_to_use:
+        # If no commit_sha is provided, find the default branch via GitHub API
+        api_url = f"https://api.github.com/repos/{owner_repo.strip('/')}"
+        print(f"No commit SHA provided. Fetching default branch from {api_url}...")
+        try:
+            # Note: GitHub API has rate limits for unauthenticated requests.
+            # For heavy use, consider adding an authentication token.
+            response = requests.get(api_url)
+            response.raise_for_status()
+            repo_info = response.json()
+            default_branch = repo_info.get("default_branch")
+            if not default_branch:
+                print(f"Error: Could not determine default branch for {owner_repo}.")
+                return None
+            print(f"Default branch for {owner_repo} is '{default_branch}'.")
+            # Use the full ref for the default branch to create a more specific URL.
+            ref_to_use = f"refs/heads/{default_branch}"
+        except requests.exceptions.HTTPError as e:
+            print(
+                f"Error fetching repository info from GitHub API: {e.response.status_code} {e.response.reason}"
+            )
+            print(f"URL: {api_url}")
+            return None
+        except requests.exceptions.RequestException as e:
+            print(
+                f"An error occurred while requesting repository info from GitHub: {e}"
+            )
+            return None
+
     # Construct the raw content URL
-    raw_url = f"https://raw.githubusercontent.com/{owner_repo.strip('/')}/{commit_sha}/{file_path}"
+    raw_url = f"https://raw.githubusercontent.com/{owner_repo.strip('/')}/{ref_to_use}/{file_path}"
 
     try:
+        print(f"Fetching file from: {raw_url}")
         response = requests.get(raw_url)
         response.raise_for_status()  # Raises an HTTPError for bad responses (4xx or 5xx)
         return response.text
@@ -391,11 +426,30 @@ public class OnlyTest {
     print(f"\nExtracted from only code in java block:\n{extracted_only_code}")
 
     print("\n--- Testing GitHub code fetching ---")
-    # Example GitHub raw file URL (this will not work here as it's a live request)
-    owner_repo = "mkouba/rewrite"
-    commit_sha = "fd31001808dc4c1869f43cbdb09f64b6"
-    file_path = "config-servlet-tests/src/test/java/org/ocpsoft/rewrite/servlet/config/RequestParameterTest.java"
+    # Example 1: Fetching a specific file from the latest (default branch) version of a repo
+    print("\nFetching latest README.md from psf/requests...")
+    owner_repo_1 = "psf/requests"
+    file_path_1 = "README.md"
+    latest_code = get_code_from_github(owner_repo=owner_repo_1, file_path=file_path_1)
+    if latest_code:
+        print(
+            f"Successfully fetched latest code (first 100 chars):\n{latest_code[:100]}..."
+        )
+    else:
+        print("Failed to fetch latest code.")
 
-    # This is just an example, it won't actually fetch in this environment
-    fetched_code = get_code_from_github(owner_repo, commit_sha, file_path)
-    print(f"Fetched code from GitHub:\n{fetched_code}")
+    # Example 2: Fetching a file from a specific commit
+    print("\nFetching README.rst from a specific commit in psf/requests...")
+    owner_repo_2 = "psf/requests"
+    # A specific commit SHA from the requests repo history
+    commit_sha_2 = "a75728a6b5511813846f675e05715a258a9d99b3"
+    file_path_2 = "README.rst"  # The file was README.rst at that commit
+    specific_code = get_code_from_github(
+        owner_repo=owner_repo_2, file_path=file_path_2, commit_sha=commit_sha_2
+    )
+    if specific_code:
+        print(
+            f"Successfully fetched specific version (first 100 chars):\n{specific_code[:100]}..."
+        )
+    else:
+        print("Failed to fetch specific version.")
