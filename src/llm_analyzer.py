@@ -58,6 +58,7 @@ Here is the content of the target project's build file ({build_file_name}):
     prompt += """---
 Please analyze the build error in the context of the provided test case, target class code, and build file.
 Suggest specific modifications to the *test case code only* to fix the build error and make it compatible with the target project's class.
+Explain shortly why these changes are necessary.
 Provide ONLY the modified test case code.
 """
     return prompt

@@ -5,3 +5,4 @@ dummy_java_projects/
 *.pyc
 data/
 data/testcaseTargetUUTPairMatching.csv
+.idea

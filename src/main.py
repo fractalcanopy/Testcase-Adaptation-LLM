@@ -243,7 +243,7 @@ if __name__ == "__main__":
     # --- Configuration ---
     # Set this flag to False to use the real data from your dataset.
     # Set it to True to use the local dummy projects.
-    USE_DUMMY_PROJECTS = False
+    USE_DUMMY_PROJECTS = True
 
     project_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
