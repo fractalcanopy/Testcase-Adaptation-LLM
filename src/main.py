@@ -107,7 +107,7 @@ def main(
 
         # Step D: Parse Maven error
         print("\nStep D: Parsing Maven error output...")
-        parsed_error = parse_maven_error(stderr_str if stderr_str else stdout_str)
+        parsed_error = parse_maven_error(stdout_str if stdout_str else stderr_str)
         if not parsed_error or parsed_error.get("error_type") == "unknown":
             print("Could not parse a specific error, or error type is unknown.")
             error_for_prompt = stderr_str if stderr_str else stdout_str
@@ -286,10 +286,14 @@ if __name__ == "__main__":
 
         # 1. Define repository and file details from your dataset
         source_repo = "briceruzand/performance-plugin"
-        source_test_file_in_repo = "src/test/java/hudson/plugins/performance/reports/PerformanceReportTest.java"
+        source_test_file_in_repo = (
+            "src/test/java/hudson/plugins/performance/reports/UriReportTest.java"
+        )
 
         target_repo = "jenkinsci/performance-plugin"
-        target_uut_file_in_repo = "perfomance-plugin/src/test/java/hudson/plugins/performance/reports/PerformanceReportTest.java"
+        target_uut_file_in_repo = (
+            "src/main/java/hudson/plugins/performance/reports/UriReport.java"
+        )
 
         # 2. Define local path for the cloned target project
         target_project_local_path = os.path.join(

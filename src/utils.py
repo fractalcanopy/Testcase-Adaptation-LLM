@@ -54,13 +54,13 @@ def parse_maven_error(error_output: str) -> dict:
     if not error_output:
         return {}
 
-    # Regex to find "cannot find symbol" errors
+    # Regex to find "cannot find symbol" errors (English) - now more robust
     cannot_find_symbol_match = re.search(
         r"\[ERROR\] .*cannot find symbol\s*\n"
-        r"\[ERROR\]\s*symbol:\s*(method|variable|class|interface|package)\s*([^\n\r]*)\s*\n"
-        r"\[ERROR\]\s*location:\s*([^\n\r]*)",
+        r"^(?:\[ERROR\])?\s*symbol:\s*(method|variable|class|interface|package)\s*([^\n\r]*)\s*\n"
+        r"^(?:\[ERROR\])?\s*location:\s*([^\n\r]*)",
         error_output,
-        re.MULTILINE,
+        re.MULTILINE | re.IGNORECASE,
     )
     if cannot_find_symbol_match:
         return {
@@ -69,6 +69,31 @@ def parse_maven_error(error_output: str) -> dict:
             "symbol_name": cannot_find_symbol_match.group(2).strip(),
             "location": cannot_find_symbol_match.group(3).strip(),
             "raw_message": cannot_find_symbol_match.group(0),
+        }
+
+    # Regex to find "Symbol nicht gefunden" errors (German)
+    german_cannot_find_symbol_match = re.search(
+        r"\[ERROR\] .*Symbol nicht gefunden\s*\n"
+        r"^(?:\[ERROR\])?\s*Symbol:\s*(Methode|Variable|Klasse|Schnittstelle|Paket)\s*([^\n\r]*)\s*\n"
+        r"^(?:\[ERROR\])?\s*Ort:\s*([^\n\r]*)",
+        error_output,
+        re.MULTILINE | re.IGNORECASE,
+    )
+    if german_cannot_find_symbol_match:
+        german_type = german_cannot_find_symbol_match.group(1).strip().lower()
+        type_map = {
+            "methode": "method",
+            "variable": "variable",
+            "klasse": "class",
+            "schnittstelle": "interface",
+            "paket": "package",
+        }
+        return {
+            "error_type": "cannot find symbol",
+            "symbol_type": type_map.get(german_type, german_type),
+            "symbol_name": german_cannot_find_symbol_match.group(2).strip(),
+            "location": german_cannot_find_symbol_match.group(3).strip(),
+            "raw_message": german_cannot_find_symbol_match.group(0),
         }
 
     # Regex for "method X in class Y cannot be applied to given types"
