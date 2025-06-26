@@ -285,7 +285,7 @@ if __name__ == "__main__":
         print("--- Using REAL data for workflow ---")
 
         # 1. Define repository and file details from your dataset
-        source_repo = "briceruzand/performance-plugin"
+        source_repo = "NOX2912/performance-plugin"
         source_test_file_in_repo = (
             "src/test/java/hudson/plugins/performance/reports/UriReportTest.java"
         )
