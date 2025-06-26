@@ -243,7 +243,7 @@ if __name__ == "__main__":
     # --- Configuration ---
     # Set this flag to False to use the real data from your dataset.
     # Set it to True to use the local dummy projects.
-    USE_DUMMY_PROJECTS = True
+    USE_DUMMY_PROJECTS = False
 
     project_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -285,17 +285,15 @@ if __name__ == "__main__":
         print("--- Using REAL data for workflow ---")
 
         # 1. Define repository and file details from your dataset
-        source_repo = "jsight/rewrite"
-        source_test_file_in_repo = (
-            "api/src/test/java/org/ocpsoft/rewrite/util/ParseToolsTest.java"
-        )
+        source_repo = "briceruzand/performance-plugin"
+        source_test_file_in_repo = "src/test/java/hudson/plugins/performance/reports/PerformanceReportTest.java"
 
-        target_repo = "ALRubinger/rewrite"
-        target_uut_file_in_repo = "impl-config/src/main/java/org/ocpsoft/rewrite/bind/parse/CapturingGroup.java"
+        target_repo = "jenkinsci/performance-plugin"
+        target_uut_file_in_repo = "perfomance-plugin/src/test/java/hudson/plugins/performance/reports/PerformanceReportTest.java"
 
         # 2. Define local path for the cloned target project
         target_project_local_path = os.path.join(
-            project_root_dir, "data", "projects", "rewrite-target"
+            project_root_dir, "data", "projects", "performance-plugin"
         )
 
         # 3. Fetch the source test case from GitHub

@@ -6,3 +6,4 @@ dummy_java_projects/
 data/
 data/testcaseTargetUUTPairMatching.csv
 .idea
+.vscode
