@@ -58,7 +58,14 @@ Here is the content of the target project's build file ({build_file_name}):
     prompt += """---
 Please analyze the build error in the context of the provided test case, target class code, and build file.
 Suggest specific modifications to the *test case code only* to fix the build error and make it compatible with the target project's class.
-Explain shortly why these changes are necessary.
+
+After suggesting the changes, classify the relationship between the original and the modified test case as a code clone of Type-1, Type-2, Type-3, or Type-4 based on these definitions:
+- **Type-1:** Exact copy, only whitespace or comments differ.
+- **Type-2:** Syntactically identical, but with changes in variable names, types, or literals.
+- **Type-3:** Copied with further modifications like adding, removing, or changing statements.
+- **Type-4:** Semantically similar code that achieves the same goal but with different syntax.
+
+Explain shortly why the changes are necessary and your reasoning for the classification.
 Provide ONLY the modified test case code.
 """
     return prompt
