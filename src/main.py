@@ -285,19 +285,17 @@ if __name__ == "__main__":
         print("--- Using REAL data for workflow ---")
 
         # 1. Define repository and file details from your dataset
-        source_repo = "NOX2912/performance-plugin"
-        source_test_file_in_repo = (
-            "src/test/java/hudson/plugins/performance/reports/UriReportTest.java"
-        )
+        source_repo = "gresrun/jesque"
+        source_test_file_in_repo = "src/test/java/net/greghaines/jesque/meta/dao/impl/TestQueueInfoDAORedisImpl.java"
 
-        target_repo = "jenkinsci/performance-plugin"
+        target_repo = "dbrambilla/jesque"
         target_uut_file_in_repo = (
-            "src/main/java/hudson/plugins/performance/reports/UriReport.java"
+            "src/main/java/net/greghaines/jesque/meta/dao/QueueInfoDAO.java"
         )
 
         # 2. Define local path for the cloned target project
         target_project_local_path = os.path.join(
-            project_root_dir, "data", "projects", "performance-plugin"
+            project_root_dir, "data", "projects", "jesque"
         )
 
         # 3. Fetch the source test case from GitHub
