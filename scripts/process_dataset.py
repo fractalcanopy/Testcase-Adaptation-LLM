@@ -1,6 +1,42 @@
 import pandas as pd
 import os
 import re
+import subprocess
+
+
+def clone_repo(project_name: str, projects_base_dir: str):
+    """
+    Clones a GitHub repository if it doesn't already exist locally.
+
+    Args:
+        project_name (str): The name of the project in 'owner/repo' format.
+        projects_base_dir (str): The base directory to clone projects into.
+    """
+    try:
+        repo_name = project_name.split("/")[-1]
+        target_clone_path = os.path.join(projects_base_dir, repo_name)
+        clone_url = f"https://github.com/{project_name}.git"
+
+        if os.path.isdir(target_clone_path):
+            print(
+                f"Project '{project_name}' already exists at '{target_clone_path}'. Skipping clone."
+            )
+            return
+
+        print(f"Cloning '{project_name}' into '{target_clone_path}'...")
+        subprocess.run(
+            ["git", "clone", clone_url, target_clone_path],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        print(f"Successfully cloned '{project_name}'.")
+
+    except subprocess.CalledProcessError as e:
+        print(f"Error cloning repository '{project_name}':")
+        print(e.stderr)
+    except Exception as e:
+        print(f"An unexpected error occurred during clone: {e}")
 
 
 def format_file_path(file_path: str, project_name: str) -> str:
@@ -68,7 +104,7 @@ def extract_info_from_row(row: pd.Series) -> dict | None:
         return None
 
 
-def process_dataset(file_path: str, num_rows: int = 5):
+def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
     """
     Reads the dataset CSV and processes each row to extract and format information.
     """
@@ -85,6 +121,10 @@ def process_dataset(file_path: str, num_rows: int = 5):
                 print(f"  Source Test Path: {info['source_test_path']}")
                 print(f"  Target Project: {info['target_project']}")
                 print(f"  Target UUT Path: {info['target_uut_path']}")
+
+                # Clone the target project repository
+                clone_repo(info["target_project"], projects_base_dir)
+
                 print("-" * 20)
 
     except FileNotFoundError:
@@ -98,9 +138,13 @@ if __name__ == "__main__":
     dataset_file = os.path.join(
         project_root, "data", "testcaseTargetUUTPairMatching.csv"
     )
+    projects_dir = os.path.join(project_root, "data", "projects")
+
+    # Ensure the base directory for projects exists
+    os.makedirs(projects_dir, exist_ok=True)
 
     if os.path.exists(dataset_file):
-        process_dataset(dataset_file, num_rows=3)
+        process_dataset(dataset_file, projects_dir, num_rows=3)
     else:
         print(f"Dataset file not found at '{dataset_file}'.")
         print("Please ensure the dataset is available at that location.")
