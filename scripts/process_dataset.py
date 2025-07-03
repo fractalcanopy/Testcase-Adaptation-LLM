@@ -2,6 +2,15 @@ import pandas as pd
 import os
 import re
 import subprocess
+import sys
+
+# Add the project root to the Python path to allow importing from 'src'
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, project_root)
+
+# Import after adding project root to path
+from src.main import main as run_adaptation_workflow
+from src.utils import get_code_from_github
 
 
 def clone_repo(project_name: str, projects_base_dir: str):
@@ -124,6 +133,45 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
 
                 # Clone the target project repository
                 clone_repo(info["target_project"], projects_base_dir)
+
+                # --- Integration with main.py ---
+                print("\n--- Preparing to run adaptation workflow ---")
+
+                # 1. Fetch source test code from GitHub
+                source_test_code = get_code_from_github(
+                    owner_repo=info["source_project"],
+                    file_path=info["source_test_path"],
+                )
+                if not source_test_code:
+                    print(
+                        f"Could not fetch source code for {info['source_project']}/{info['source_test_path']}. Skipping row."
+                    )
+                    print("-" * 20)
+                    continue
+
+                # 2. Determine local path for the cloned target project
+                target_repo_name = info["target_project"].split("/")[-1]
+                target_project_local_path = os.path.join(
+                    projects_base_dir, target_repo_name
+                )
+
+                if not os.path.isdir(target_project_local_path):
+                    print(
+                        f"Error: Target project directory not found at '{target_project_local_path}' after clone attempt. Skipping row."
+                    )
+                    print("-" * 20)
+                    continue
+
+                # 3. Run the main adaptation workflow
+                print(f"--- Starting adaptation for Row {index + 1} ---")
+                run_adaptation_workflow(
+                    original_test_case_code=source_test_code,
+                    source_test_origin_path=info["source_test_path"],
+                    target_project_path=target_project_local_path,
+                    target_class_relative_path=info["target_uut_path"],
+                )
+                print(f"--- Finished adaptation for Row {index + 1} ---")
+                # --- End of Integration ---
 
                 print("-" * 20)
 

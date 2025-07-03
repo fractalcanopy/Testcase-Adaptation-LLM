@@ -1,13 +1,13 @@
 import os
 from dotenv import load_dotenv
 
-from utils import (
+from .utils import (
     parse_maven_error,
     extract_java_code_from_llm_response,
     get_code_from_github,
 )
-from java_env_manager import invoke_maven_build
-from llm_analyzer import construct_llm_prompt
+from .java_env_manager import invoke_maven_build
+from .llm_analyzer import construct_llm_prompt
 
 
 def read_file_content(file_path: str) -> str | None:
