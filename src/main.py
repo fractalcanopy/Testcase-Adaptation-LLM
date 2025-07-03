@@ -4,10 +4,11 @@ from dotenv import load_dotenv
 from .utils import (
     parse_maven_error,
     extract_java_code_from_llm_response,
+    extract_xml_code_from_llm_response,  # Import the new function
     get_code_from_github,
 )
 from .java_env_manager import invoke_maven_build
-from .llm_analyzer import construct_llm_prompt
+from .llm_analyzer import construct_llm_prompt, construct_pom_fix_prompt
 
 
 def read_file_content(file_path: str) -> str | None:
@@ -58,6 +59,73 @@ def main(
     if not original_test_case_code:
         print("Exiting due to empty source test case code.")
         return
+
+    # --- Pre-Build Check ---
+    print(
+        f"\n--- Pre-Build Check: Verifying target project '{target_project_path}' builds correctly ---"
+    )
+    return_code, stdout_str, stderr_str = invoke_maven_build(target_project_path)
+
+    if return_code != 0:
+        print("Pre-build check FAILED. The target project does not compile on its own.")
+        print("Attempting to fix the build configuration (pom.xml)...")
+
+        # Parse error
+        parsed_error = parse_maven_error(stdout_str if stdout_str else stderr_str)
+        error_for_prompt = parsed_error.get("raw_message", stderr_str)
+
+        # Read pom.xml
+        pom_path = os.path.join(target_project_path, "pom.xml")
+        pom_content = read_file_content(pom_path)
+
+        if pom_content and error_for_prompt:
+            # Construct prompt to fix pom.xml
+            pom_fix_prompt = construct_pom_fix_prompt(error_for_prompt, pom_content)
+
+            # Query LLM
+            try:
+                import google.generativeai as genai
+
+                genai.configure(api_key=gemini_api_key)
+                model = genai.GenerativeModel("gemini-1.5-flash")
+                response = model.generate_content(pom_fix_prompt)
+                llm_suggestion = response.text
+
+                # Extract and apply fix
+                suggested_pom = extract_xml_code_from_llm_response(llm_suggestion)
+                print("\n--- LLM Suggested pom.xml Fix ---")
+                print("--------------------------------------------------")
+                print(suggested_pom)
+                print("--------------------------------------------------")
+                if suggested_pom:
+                    print(
+                        "LLM suggested a fix for pom.xml. Applying and re-building..."
+                    )
+                    with open(pom_path, "w", encoding="utf-8") as f:
+                        f.write(suggested_pom)
+
+                    # Re-build to verify the fix
+                    return_code, _, stderr_str = invoke_maven_build(target_project_path)
+                    if return_code == 0:
+                        print("SUCCESS: Pre-build check passed after fixing pom.xml.")
+                    else:
+                        print(
+                            "FAILURE: Pre-build check failed again after applying pom.xml fix."
+                        )
+                        print(f"Error:\n{stderr_str}")
+                        print("Aborting workflow.")
+                        return
+                else:
+                    print("LLM did not provide a valid pom.xml fix. Aborting workflow.")
+                    return
+            except Exception as e:
+                print(f"An error occurred while trying to fix pom.xml: {e}")
+                return
+        else:
+            print("Could not read pom.xml or build error. Aborting workflow.")
+            return
+    else:
+        print("SUCCESS: Pre-build check passed. Target project builds correctly.")
 
     # Step A: Place the test file into the target project with correct package structure
     source_test_filename = os.path.basename(source_test_origin_path)

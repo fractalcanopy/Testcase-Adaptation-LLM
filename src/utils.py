@@ -165,7 +165,7 @@ def parse_maven_error(error_output: str) -> dict:
 
 def extract_java_code_from_llm_response(llm_response: str) -> str | None:
     """
-    Extracts a Java code block from the LLM's raw text response.
+    Extracts a Java code block from the LLM's markdown response.
     Assumes the Java code is enclosed in ```java ... ``` or ``` ... ```.
 
     Args:
@@ -211,6 +211,24 @@ def extract_java_code_from_llm_response(llm_response: str) -> str | None:
         pass  # Sticking to backtick extraction for now as per the example.
 
     print("Could not extract Java code block from LLM response.")
+    return None
+
+
+def extract_xml_code_from_llm_response(llm_response: str) -> str | None:
+    """
+    Extracts an XML code block from the LLM's markdown response.
+
+    Args:
+        llm_response (str): The markdown-formatted response from the LLM.
+
+    Returns:
+        str | None: The extracted XML code as a string, or None if not found.
+    """
+    # Pattern to find a code block for XML
+    pattern = r"```xml\s*([\s\S]+?)\s*```"
+    match = re.search(pattern, llm_response, re.DOTALL)
+    if match:
+        return match.group(1).strip()
     return None
 
 

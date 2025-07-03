@@ -71,6 +71,36 @@ Provide ONLY the modified test case code.
     return prompt
 
 
+def construct_pom_fix_prompt(build_error: str, pom_content: str) -> str:
+    """
+    Assembles a structured prompt for an LLM to suggest fixes for a failing pom.xml.
+
+    Args:
+        build_error (str): The parsed build error message.
+        pom_content (str): The content of the pom.xml file.
+
+    Returns:
+        str: A formatted prompt string for the LLM.
+    """
+    prompt = f"""The following Maven build failed. The error seems to be related to the project configuration in the `pom.xml` file.
+    The build error was:
+    ```
+    {build_error}
+    ```
+    ---
+    Here is the content of the `pom.xml` file:
+    ```xml
+    {pom_content}
+    ```
+    ---
+    Please analyze the build error and the `pom.xml`.
+    Your task is to provide a corrected version of the `pom.xml` file that resolves the build error.
+
+    Provide ONLY the complete, corrected `pom.xml` file content inside a single XML code block. Do not add any explanations before or after the code block.
+    """
+    return prompt
+
+
 if __name__ == "__main__":
     # Example Usage:
     sample_test_case = """
