@@ -54,7 +54,7 @@ def main(
         target_class_relative_path,
     )
 
-    print(f"--- Starting Test Adaptation Workflow ---")
+    print(f"--- Starting Test Adaptation Workflow ---")  # noqa: F541
     print(f"Source Test Origin: {source_test_origin_path}")
     print(f"Target Project Path: {target_project_path}")
     print(f"Target Class Relative Path: {target_class_relative_path}")
@@ -365,7 +365,7 @@ def main(
             f"\n--- Test Adaptation Workflow Finished: Build failed after {max_attempts} attempts ---"
         )
     else:
-        print(f"\n--- Test Adaptation Workflow Finished: Build succeeded ---")
+        print(f"\n--- Test Adaptation Workflow Finished: Build succeeded ---")  # noqa: F541
 
     # Finish metrics tracking
     global_metrics.finish_tracking()

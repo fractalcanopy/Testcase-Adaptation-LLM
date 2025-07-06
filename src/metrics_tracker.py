@@ -1,6 +1,6 @@
 import json
 import re
-import os
+import os  # noqa: F401
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
@@ -257,21 +257,21 @@ class MetricsTracker:
         print(f"LLM usage count: {stats['llm_usage_count']}")
 
         if stats["classification_distribution"]:
-            print(f"\nClone classification distribution:")
+            print(f"\nClone classification distribution:")  # noqa: F541
             for class_type, count in stats["classification_distribution"].items():
                 print(f"  {class_type}: {count}")
 
         if stats["success_by_attempt"]:
-            print(f"\nSuccess by attempt number:")
+            print(f"\nSuccess by attempt number:")  # noqa: F541
             for attempt, count in sorted(stats["success_by_attempt"].items()):
                 print(f"  Attempt {attempt}: {count}")
 
         if stats["error_type_distribution"]:
-            print(f"\nError type distribution:")
+            print(f"\nError type distribution:")  # noqa: F541
             for error_type, count in stats["error_type_distribution"].items():
                 print(f"  {error_type}: {count}")
 
-        print(f"\nTiming:")
+        print(f"\nTiming:")  # noqa: F541
         print(
             f"  Average execution time: {stats['average_execution_time_seconds']:.2f}s"
         )

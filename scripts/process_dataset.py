@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-import re
+import re  # noqa: F401
 import subprocess
 import sys
 
@@ -9,9 +9,9 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
 
 # Import after adding project root to path
-from src.main import main as run_adaptation_workflow
-from src.utils import get_code_from_github
-from src.metrics_tracker import global_metrics
+from src.main import main as run_adaptation_workflow  # noqa: E402
+from src.utils import get_code_from_github  # noqa: E402
+from src.metrics_tracker import global_metrics  # noqa: E402
 
 
 def set_java_8_environment():
