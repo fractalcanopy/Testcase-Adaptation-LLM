@@ -11,6 +11,32 @@ sys.path.insert(0, project_root)
 # Import after adding project root to path
 from src.main import main as run_adaptation_workflow
 from src.utils import get_code_from_github
+from src.metrics_tracker import global_metrics
+
+
+def set_java_8_environment():
+    """
+    Sets environment variables to use JDK 8 for Maven builds.
+    """
+    try:
+        # Get JDK 8 home path
+        result = subprocess.run(
+            ["/usr/libexec/java_home", "-v", "1.8"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        java_8_home = result.stdout.strip()
+
+        # Set environment variables
+        os.environ["JAVA_HOME"] = java_8_home
+        os.environ["PATH"] = f"{java_8_home}/bin:{os.environ.get('PATH', '')}"
+
+        print(f"Set JAVA_HOME to: {java_8_home}")
+        return True
+    except subprocess.CalledProcessError:
+        print("Error: JDK 8 not found. Please install JDK 8 first.")
+        return False
 
 
 def clone_repo(project_name: str, projects_base_dir: str):
@@ -117,6 +143,12 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
     """
     Reads the dataset CSV and processes each row to extract and format information.
     """
+    # Set Java 8 environment before processing
+    """
+    if not set_java_8_environment():
+        print("Cannot proceed without JDK 8. Exiting.")
+        return
+    """
     try:
         df = pd.read_csv(file_path, sep=";")
         print(f"Successfully loaded dataset from '{file_path}'.\n")
@@ -162,7 +194,16 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
                     print("-" * 20)
                     continue
 
-                # 3. Run the main adaptation workflow
+                # 3. Update the global metrics tracker with source project info
+                if (
+                    hasattr(global_metrics, "current_result")
+                    and global_metrics.current_result
+                ):
+                    global_metrics.current_result.source_project = info[
+                        "source_project"
+                    ]
+
+                # 4. Run the main adaptation workflow
                 print(f"--- Starting adaptation for Row {index + 1} ---")
                 run_adaptation_workflow(
                     original_test_case_code=source_test_code,
@@ -174,6 +215,14 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
                 # --- End of Integration ---
 
                 print("-" * 20)
+
+        # After processing all rows, save metrics and print summary
+        print("\n" + "=" * 60)
+        print("DATASET PROCESSING COMPLETE")
+        print("=" * 60)
+
+        global_metrics.save_results()
+        global_metrics.print_summary()
 
     except FileNotFoundError:
         print(f"Error: Dataset file not found at '{file_path}'")
@@ -192,7 +241,7 @@ if __name__ == "__main__":
     os.makedirs(projects_dir, exist_ok=True)
 
     if os.path.exists(dataset_file):
-        process_dataset(dataset_file, projects_dir, num_rows=3)
+        process_dataset(dataset_file, projects_dir, num_rows=2)
     else:
         print(f"Dataset file not found at '{dataset_file}'.")
         print("Please ensure the dataset is available at that location.")

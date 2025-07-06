@@ -9,6 +9,7 @@ from .utils import (
 )
 from .java_env_manager import invoke_maven_build
 from .llm_analyzer import construct_llm_prompt, construct_pom_fix_prompt
+from .metrics_tracker import global_metrics
 
 
 def read_file_content(file_path: str) -> str | None:
@@ -43,6 +44,16 @@ def main(
                                            within the target project (e.g., "src/main/java/com/example/Calculator.java").
         max_attempts (int): Maximum number of LLM adaptation attempts if build keeps failing.
     """
+    # Start metrics tracking
+    source_project = "unknown"  # Will be set by process_dataset.py
+    target_project = os.path.basename(target_project_path)
+    global_metrics.start_tracking(
+        source_project,
+        source_test_origin_path,
+        target_project,
+        target_class_relative_path,
+    )
+
     print(f"--- Starting Test Adaptation Workflow ---")
     print(f"Source Test Origin: {source_test_origin_path}")
     print(f"Target Project Path: {target_project_path}")
@@ -58,6 +69,7 @@ def main(
 
     if not original_test_case_code:
         print("Exiting due to empty source test case code.")
+        global_metrics.finish_tracking()
         return
 
     # --- Pre-Build Check ---
@@ -65,6 +77,7 @@ def main(
         f"\n--- Pre-Build Check: Verifying target project '{target_project_path}' builds correctly ---"
     )
     return_code, stdout_str, stderr_str = invoke_maven_build(target_project_path)
+    pom_fix_applied = False
 
     if return_code != 0:
         print("Pre-build check FAILED. The target project does not compile on its own.")
@@ -103,6 +116,7 @@ def main(
                     )
                     with open(pom_path, "w", encoding="utf-8") as f:
                         f.write(suggested_pom)
+                    pom_fix_applied = True
 
                     # Re-build to verify the fix
                     return_code, _, stderr_str = invoke_maven_build(target_project_path)
@@ -114,18 +128,29 @@ def main(
                         )
                         print(f"Error:\n{stderr_str}")
                         print("Aborting workflow.")
+                        global_metrics.record_pre_build_result(False, pom_fix_applied)
+                        global_metrics.finish_tracking()
                         return
                 else:
                     print("LLM did not provide a valid pom.xml fix. Aborting workflow.")
+                    global_metrics.record_pre_build_result(False, pom_fix_applied)
+                    global_metrics.finish_tracking()
                     return
             except Exception as e:
                 print(f"An error occurred while trying to fix pom.xml: {e}")
+                global_metrics.record_pre_build_result(False, pom_fix_applied)
+                global_metrics.finish_tracking()
                 return
         else:
             print("Could not read pom.xml or build error. Aborting workflow.")
+            global_metrics.record_pre_build_result(False, pom_fix_applied)
+            global_metrics.finish_tracking()
             return
     else:
         print("SUCCESS: Pre-build check passed. Target project builds correctly.")
+
+    # Record pre-build result
+    global_metrics.record_pre_build_result(return_code == 0, pom_fix_applied)
 
     # Step A: Place the test file into the target project with correct package structure
     source_test_filename = os.path.basename(source_test_origin_path)
@@ -160,6 +185,7 @@ def main(
         print(f"Successfully saved Java test case to: {target_test_file_full_path}")
     except IOError as e:
         print(f"Error saving Java test case to {target_test_file_full_path}: {e}")
+        global_metrics.finish_tracking()
         return
 
     # --- Adaptation loop ---
@@ -177,6 +203,7 @@ def main(
         # Step C: Check build result
         if return_code == 0:
             print(f"\nStep C: Success on attempt {attempt}! Build was successful.")
+            global_metrics.record_adaptation_attempt(attempt, True)
             break
         else:
             print(
@@ -191,11 +218,18 @@ def main(
                 error_for_prompt = stderr_str if stderr_str else stdout_str
                 if not error_for_prompt:
                     error_for_prompt = "No detailed error message captured from build."
+                error_type = "unknown"
             elif parsed_error.get("error_type") == "environment_error":
                 print(f"Environment error: {parsed_error.get('message')}")
                 print("Cannot proceed with LLM analysis for environment errors.")
+                global_metrics.record_initial_error("environment_error")
+                global_metrics.record_adaptation_attempt(
+                    attempt, False, parsed_error.get("message")
+                )
+                global_metrics.finish_tracking()
                 return
             else:
+                error_type = parsed_error.get("error_type", "unknown")
                 if parsed_error.get("error_type") == "cannot find symbol":
                     error_for_prompt = (
                         f"Cannot find symbol: {parsed_error.get('symbol_type')} {parsed_error.get('symbol_name')}\n"
@@ -208,6 +242,11 @@ def main(
                             "raw_message", "No specific error message parsed."
                         ),
                     )
+
+            # Record initial error type (only for first attempt)
+            if attempt == 1:
+                global_metrics.record_initial_error(error_type)
+
             print(f"Parsed error for prompt: {error_for_prompt}")
 
             # Step E: Read content of the relevant target class file
@@ -220,6 +259,10 @@ def main(
                 print(
                     f"Could not read target class file at {target_class_full_path}. Cannot proceed with LLM analysis."
                 )
+                global_metrics.record_adaptation_attempt(
+                    attempt, False, "Could not read target class file"
+                )
+                global_metrics.finish_tracking()
                 return
 
             target_class_name_for_prompt = os.path.basename(target_class_full_path)
@@ -252,6 +295,8 @@ def main(
             if not gemini_api_key:
                 print("Gemini API key not available. Skipping LLM query.")
                 llm_suggestion = "Error: Gemini API key not configured."
+                global_metrics.record_adaptation_attempt(attempt, False, "No API key")
+                break
             else:
                 try:
                     import google.generativeai as genai
@@ -260,9 +305,15 @@ def main(
                     model = genai.GenerativeModel("gemini-1.5-flash")
                     response = model.generate_content(llm_prompt)
                     llm_suggestion = response.text
+
+                    # Record LLM usage and extract classification
+                    global_metrics.record_llm_usage(llm_suggestion)
+
                 except Exception as e:
                     print(f"Error during LLM API call: {e}")
                     llm_suggestion = f"Error during LLM API call: {e}"
+                    global_metrics.record_adaptation_attempt(attempt, False, str(e))
+                    break
 
             # Step H: Print raw LLM suggestion
             print("\nStep H: Raw LLM Suggestion:")
@@ -292,12 +343,22 @@ def main(
                     )
                 except IOError as e:
                     print(f"Error writing suggested Java code to file: {e}")
+                    global_metrics.record_adaptation_attempt(attempt, False, str(e))
                     break
             else:
                 print("No Java code block found in LLM suggestion. Cannot apply fix.")
+                global_metrics.record_adaptation_attempt(
+                    attempt, False, "No code block found in LLM response"
+                )
                 break
 
         attempt += 1
+
+    # Record final attempt result if we exited the loop due to max attempts
+    if return_code != 0 and attempt > max_attempts:
+        global_metrics.record_adaptation_attempt(
+            max_attempts, False, "Max attempts exceeded"
+        )
 
     if return_code != 0:
         print(
@@ -305,6 +366,9 @@ def main(
         )
     else:
         print(f"\n--- Test Adaptation Workflow Finished: Build succeeded ---")
+
+    # Finish metrics tracking
+    global_metrics.finish_tracking()
 
 
 if __name__ == "__main__":
