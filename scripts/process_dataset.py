@@ -14,31 +14,6 @@ from src.utils import get_code_from_github  # noqa: E402
 from src.metrics_tracker import global_metrics  # noqa: E402
 
 
-def set_java_8_environment():
-    """
-    Sets environment variables to use JDK 8 for Maven builds.
-    """
-    try:
-        # Get JDK 8 home path
-        result = subprocess.run(
-            ["/usr/libexec/java_home", "-v", "1.8"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        java_8_home = result.stdout.strip()
-
-        # Set environment variables
-        os.environ["JAVA_HOME"] = java_8_home
-        os.environ["PATH"] = f"{java_8_home}/bin:{os.environ.get('PATH', '')}"
-
-        print(f"Set JAVA_HOME to: {java_8_home}")
-        return True
-    except subprocess.CalledProcessError:
-        print("Error: JDK 8 not found. Please install JDK 8 first.")
-        return False
-
-
 def clone_repo(project_name: str, projects_base_dir: str):
     """
     Clones a GitHub repository if it doesn't already exist locally.
@@ -241,7 +216,7 @@ if __name__ == "__main__":
     os.makedirs(projects_dir, exist_ok=True)
 
     if os.path.exists(dataset_file):
-        process_dataset(dataset_file, projects_dir, num_rows=2)
+        process_dataset(dataset_file, projects_dir, num_rows=10)
     else:
         print(f"Dataset file not found at '{dataset_file}'.")
         print("Please ensure the dataset is available at that location.")

@@ -1,4 +1,5 @@
 import os
+import subprocess
 from dotenv import load_dotenv
 
 from .utils import (
@@ -23,6 +24,31 @@ def read_file_content(file_path: str) -> str | None:
     except Exception as e:
         print(f"Error reading file {file_path}: {e}")
         return None
+
+
+def set_java_8_environment():
+    """
+    Sets environment variables to use JDK 8 for Maven builds.
+    """
+    try:
+        # Get JDK 8 home path
+        result = subprocess.run(
+            ["/usr/libexec/java_home", "-v", "1.8"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        java_8_home = result.stdout.strip()
+
+        # Set environment variables
+        os.environ["JAVA_HOME"] = java_8_home
+        os.environ["PATH"] = f"{java_8_home}/bin:{os.environ.get('PATH', '')}"
+
+        print(f"Set JAVA_HOME to: {java_8_home}")
+        return True
+    except subprocess.CalledProcessError:
+        print("Error: JDK 8 not found. Please install JDK 8 first.")
+        return False
 
 
 def main(
@@ -81,71 +107,104 @@ def main(
 
     if return_code != 0:
         print("Pre-build check FAILED. The target project does not compile on its own.")
-        print("Attempting to fix the build configuration (pom.xml)...")
 
-        # Parse error
-        parsed_error = parse_maven_error(stdout_str if stdout_str else stderr_str)
-        error_for_prompt = parsed_error.get("raw_message", stderr_str)
+        # Try building with Java 8 first
+        print("Attempting to build with Java 8...")
+        java_8_success = set_java_8_environment()
 
-        # Read pom.xml
-        pom_path = os.path.join(target_project_path, "pom.xml")
-        pom_content = read_file_content(pom_path)
+        if java_8_success:
+            print("Java 8 environment set. Re-running build...")
+            return_code, stdout_str, stderr_str = invoke_maven_build(
+                target_project_path
+            )
 
-        if pom_content and error_for_prompt:
-            # Construct prompt to fix pom.xml
-            pom_fix_prompt = construct_pom_fix_prompt(error_for_prompt, pom_content)
+            if return_code == 0:
+                print("SUCCESS: Pre-build check passed with Java 8.")
+                global_metrics.record_pre_build_result(True, False)
+                # Continue with the rest of the workflow...
+            else:
+                print(
+                    "Build still fails with Java 8. Attempting to fix the build configuration (pom.xml)..."
+                )
+                # Continue with LLM fix attempt...
+        else:
+            print(
+                "Could not set Java 8 environment. Attempting to fix the build configuration (pom.xml)..."
+            )
 
-            # Query LLM
-            try:
-                import google.generativeai as genai
+        # Only proceed with LLM fix if Java 8 didn't work
+        if return_code != 0:
+            # Parse error
+            parsed_error = parse_maven_error(stdout_str if stdout_str else stderr_str)
+            error_for_prompt = parsed_error.get("raw_message", stderr_str)
 
-                genai.configure(api_key=gemini_api_key)
-                model = genai.GenerativeModel("gemini-1.5-flash")
-                response = model.generate_content(pom_fix_prompt)
-                llm_suggestion = response.text
+            # Read pom.xml
+            pom_path = os.path.join(target_project_path, "pom.xml")
+            pom_content = read_file_content(pom_path)
 
-                # Extract and apply fix
-                suggested_pom = extract_xml_code_from_llm_response(llm_suggestion)
-                print("\n--- LLM Suggested pom.xml Fix ---")
-                print("--------------------------------------------------")
-                print(suggested_pom)
-                print("--------------------------------------------------")
-                if suggested_pom:
-                    print(
-                        "LLM suggested a fix for pom.xml. Applying and re-building..."
-                    )
-                    with open(pom_path, "w", encoding="utf-8") as f:
-                        f.write(suggested_pom)
-                    pom_fix_applied = True
+            if pom_content and error_for_prompt:
+                # Construct prompt to fix pom.xml
+                pom_fix_prompt = construct_pom_fix_prompt(error_for_prompt, pom_content)
 
-                    # Re-build to verify the fix
-                    return_code, _, stderr_str = invoke_maven_build(target_project_path)
-                    if return_code == 0:
-                        print("SUCCESS: Pre-build check passed after fixing pom.xml.")
+                # Query LLM
+                try:
+                    import google.generativeai as genai
+
+                    genai.configure(api_key=gemini_api_key)
+                    model = genai.GenerativeModel("gemini-1.5-flash")
+                    response = model.generate_content(pom_fix_prompt)
+                    llm_suggestion = response.text
+
+                    # Extract and apply fix
+                    suggested_pom = extract_xml_code_from_llm_response(llm_suggestion)
+                    print("\n--- LLM Suggested pom.xml Fix ---")
+                    print("--------------------------------------------------")
+                    print(suggested_pom)
+                    print("--------------------------------------------------")
+                    if suggested_pom:
+                        print(
+                            "LLM suggested a fix for pom.xml. Applying and re-building..."
+                        )
+                        with open(pom_path, "w", encoding="utf-8") as f:
+                            f.write(suggested_pom)
+                        pom_fix_applied = True
+
+                        # Re-build to verify the fix
+                        return_code, _, stderr_str = invoke_maven_build(
+                            target_project_path
+                        )
+                        if return_code == 0:
+                            print(
+                                "SUCCESS: Pre-build check passed after fixing pom.xml."
+                            )
+                        else:
+                            print(
+                                "FAILURE: Pre-build check failed again after applying pom.xml fix."
+                            )
+                            print(f"Error:\n{stderr_str}")
+                            print("Aborting workflow.")
+                            global_metrics.record_pre_build_result(
+                                False, pom_fix_applied
+                            )
+                            global_metrics.finish_tracking()
+                            return
                     else:
                         print(
-                            "FAILURE: Pre-build check failed again after applying pom.xml fix."
+                            "LLM did not provide a valid pom.xml fix. Aborting workflow."
                         )
-                        print(f"Error:\n{stderr_str}")
-                        print("Aborting workflow.")
                         global_metrics.record_pre_build_result(False, pom_fix_applied)
                         global_metrics.finish_tracking()
                         return
-                else:
-                    print("LLM did not provide a valid pom.xml fix. Aborting workflow.")
+                except Exception as e:
+                    print(f"An error occurred while trying to fix pom.xml: {e}")
                     global_metrics.record_pre_build_result(False, pom_fix_applied)
                     global_metrics.finish_tracking()
                     return
-            except Exception as e:
-                print(f"An error occurred while trying to fix pom.xml: {e}")
+            else:
+                print("Could not read pom.xml or build error. Aborting workflow.")
                 global_metrics.record_pre_build_result(False, pom_fix_applied)
                 global_metrics.finish_tracking()
                 return
-        else:
-            print("Could not read pom.xml or build error. Aborting workflow.")
-            global_metrics.record_pre_build_result(False, pom_fix_applied)
-            global_metrics.finish_tracking()
-            return
     else:
         print("SUCCESS: Pre-build check passed. Target project builds correctly.")
 
@@ -322,7 +381,7 @@ def main(
             print("--------------------------------------------------")
 
             # Step I: Extract code from LLM response
-            print("\nStep I: Extracting Java code from LLM suggestion...")
+            print("\nStep I: Extracting Java code from LLM response...")
             suggested_java_code = extract_java_code_from_llm_response(llm_suggestion)
 
             if suggested_java_code:
