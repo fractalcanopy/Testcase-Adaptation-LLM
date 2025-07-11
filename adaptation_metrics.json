@@ -2,64 +2,38 @@
   "results": [
     {
       "source_project": "unknown",
-      "source_test_path": "config-servlet-tests/src/test/java/org/ocpsoft/rewrite/servlet/config/RequestParameterTest.java",
-      "target_project": "rewrite",
-      "target_uut_path": "api/src/test/java/org/ocpsoft/rewrite/config/FilesystemTest.java",
-      "pre_build_success": true,
-      "final_build_success": true,
-      "total_attempts": 1,
-      "successful_attempt": 1,
+      "source_test_path": "swift-codec/src/test/java/com/facebook/swift/codec/AbstractThriftCodecManagerTest.java",
+      "target_project": "swift",
+      "target_uut_path": "swift-codec/src/main/java/com/facebook/swift/codec/metadata/ThriftCatalog.java",
+      "pre_build_success": false,
+      "final_build_success": false,
+      "total_attempts": 0,
+      "successful_attempt": null,
       "clone_classification": null,
       "initial_error_type": null,
       "final_error_message": null,
-      "execution_time_seconds": 9.73988389968872,
-      "timestamp": "2025-07-06T16:33:31.928406",
+      "execution_time_seconds": 57.387407064437866,
+      "timestamp": "2025-07-09T11:14:03.090609",
       "gemini_api_used": false,
-      "pom_fix_applied": false,
+      "pom_fix_applied": true,
       "build_failed_initially": false,
       "llm_response_length": null
-    },
-    {
-      "source_project": "unknown",
-      "source_test_path": "api/src/test/java/org/ocpsoft/rewrite/util/ParseToolsTest.java",
-      "target_project": "rewrite",
-      "target_uut_path": "impl-config/src/main/java/org/ocpsoft/rewrite/bind/parse/ParseTools.java",
-      "pre_build_success": true,
-      "final_build_success": true,
-      "total_attempts": 2,
-      "successful_attempt": 2,
-      "clone_classification": "Type-2",
-      "initial_error_type": "cannot find symbol",
-      "final_error_message": null,
-      "execution_time_seconds": 27.239434003829956,
-      "timestamp": "2025-07-06T16:33:42.113292",
-      "gemini_api_used": true,
-      "pom_fix_applied": false,
-      "build_failed_initially": false,
-      "llm_response_length": 7544
     }
   ],
   "summary": {
-    "total_adaptations": 2,
-    "successful_adaptations": 2,
-    "success_rate": 1.0,
-    "pre_build_failures": 0,
-    "pom_fixes_applied": 0,
+    "total_adaptations": 1,
+    "successful_adaptations": 0,
+    "success_rate": 0.0,
+    "pre_build_failures": 1,
+    "pom_fixes_applied": 1,
     "initial_build_failures": 0,
-    "llm_usage_count": 1,
-    "classification_distribution": {
-      "Type-2": 1
-    },
-    "success_by_attempt": {
-      "1": 1,
-      "2": 1
-    },
-    "error_type_distribution": {
-      "cannot find symbol": 1
-    },
-    "average_execution_time_seconds": 18.48965895175934,
-    "max_execution_time_seconds": 27.239434003829956,
-    "min_execution_time_seconds": 9.73988389968872
+    "llm_usage_count": 0,
+    "classification_distribution": {},
+    "success_by_attempt": {},
+    "error_type_distribution": {},
+    "average_execution_time_seconds": 57.387407064437866,
+    "max_execution_time_seconds": 57.387407064437866,
+    "min_execution_time_seconds": 57.387407064437866
   },
-  "generated_at": "2025-07-06T16:34:09.353385"
+  "generated_at": "2025-07-09T11:15:00.478582"
 }

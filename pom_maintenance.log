@@ -1,0 +1,126 @@
+2025-07-11 18:56:24,081 - INFO - Starting POM maintenance for directory: data/projects/Achilles
+2025-07-11 18:56:24,082 - INFO - Scanning for pom.xml files in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles
+2025-07-11 18:56:24,112 - INFO - Found 17 pom.xml files
+2025-07-11 18:56:24,112 - INFO - Starting processing of 17 POM files
+2025-07-11 18:56:24,112 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/pom.xml
+2025-07-11 18:56:24,113 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles
+2025-07-11 18:56:26,849 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles
+2025-07-11 18:56:26,849 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-2_2/pom.xml
+2025-07-11 18:56:26,849 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-2_2
+2025-07-11 18:56:28,065 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-2_2
+2025-07-11 18:56:28,065 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-core/pom.xml
+2025-07-11 18:56:28,065 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-core
+2025-07-11 18:56:29,363 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-core
+2025-07-11 18:56:29,363 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-common/pom.xml
+2025-07-11 18:56:29,364 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-common
+2025-07-11 18:56:30,535 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-common
+2025-07-11 18:56:30,535 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-model/pom.xml
+2025-07-11 18:56:30,536 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-model
+2025-07-11 18:56:31,757 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-model
+2025-07-11 18:56:31,757 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_7/pom.xml
+2025-07-11 18:56:31,758 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_7
+2025-07-11 18:56:32,911 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_7
+2025-07-11 18:56:32,911 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_0/pom.xml
+2025-07-11 18:56:32,912 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_0
+2025-07-11 18:56:34,077 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_0
+2025-07-11 18:56:34,077 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-schema-generator/pom.xml
+2025-07-11 18:56:34,077 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-schema-generator
+2025-07-11 18:56:35,210 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-schema-generator
+2025-07-11 18:56:35,210 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_8/pom.xml
+2025-07-11 18:56:35,210 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_8
+2025-07-11 18:56:36,424 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_8
+2025-07-11 18:56:36,424 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_6/pom.xml
+2025-07-11 18:56:36,425 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_6
+2025-07-11 18:56:37,572 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_6
+2025-07-11 18:56:37,572 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_10/pom.xml
+2025-07-11 18:56:37,572 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_10
+2025-07-11 18:56:38,712 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_10
+2025-07-11 18:56:38,713 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-embedded/pom.xml
+2025-07-11 18:56:38,713 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-embedded
+2025-07-11 18:56:39,867 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-embedded
+2025-07-11 18:56:39,868 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-DSE_4-8/pom.xml
+2025-07-11 18:56:39,869 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-DSE_4-8
+2025-07-11 18:56:41,023 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-DSE_4-8
+2025-07-11 18:56:41,024 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-2_1/pom.xml
+2025-07-11 18:56:41,025 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-2_1
+2025-07-11 18:56:42,176 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-2_1
+2025-07-11 18:56:42,177 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-junit/pom.xml
+2025-07-11 18:56:42,178 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-junit
+2025-07-11 18:56:43,314 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-junit
+2025-07-11 18:56:43,315 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-DSE_5-0-0/pom.xml
+2025-07-11 18:56:43,315 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-DSE_5-0-0
+2025-07-11 18:56:44,445 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-DSE_5-0-0
+2025-07-11 18:56:44,446 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_2/pom.xml
+2025-07-11 18:56:44,447 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_2
+2025-07-11 18:56:45,579 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_2
+2025-07-11 18:56:45,579 - INFO - POM maintenance completed
+2025-07-11 19:01:48,073 - INFO - Starting POM maintenance for directory: data/projects/Achilles
+2025-07-11 19:01:48,073 - INFO - Searching for tools.jar references in POM files...
+2025-07-11 19:01:48,104 - INFO - Scanning for pom.xml files in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles
+2025-07-11 19:01:48,116 - INFO - Found 17 pom.xml files
+2025-07-11 19:01:48,116 - INFO - Starting processing of 17 POM files
+2025-07-11 19:01:48,116 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/pom.xml
+2025-07-11 19:01:48,117 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles
+2025-07-11 19:01:49,484 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles
+2025-07-11 19:01:49,484 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-2_2/pom.xml
+2025-07-11 19:01:49,484 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-2_2
+2025-07-11 19:01:50,596 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-2_2
+2025-07-11 19:01:50,596 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-core/pom.xml
+2025-07-11 19:01:50,596 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-core
+2025-07-11 19:01:51,786 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-core
+2025-07-11 19:01:51,786 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-common/pom.xml
+2025-07-11 19:01:51,786 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-common
+2025-07-11 19:01:52,897 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-common
+2025-07-11 19:01:52,897 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-model/pom.xml
+2025-07-11 19:01:52,897 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-model
+2025-07-11 19:01:54,028 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-model
+2025-07-11 19:01:54,029 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_7/pom.xml
+2025-07-11 19:01:54,029 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_7
+2025-07-11 19:01:55,149 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_7
+2025-07-11 19:01:55,149 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_0/pom.xml
+2025-07-11 19:01:55,149 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_0
+2025-07-11 19:01:56,331 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_0
+2025-07-11 19:01:56,331 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-schema-generator/pom.xml
+2025-07-11 19:01:56,331 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-schema-generator
+2025-07-11 19:01:57,454 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-schema-generator
+2025-07-11 19:01:57,454 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_8/pom.xml
+2025-07-11 19:01:57,455 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_8
+2025-07-11 19:01:58,588 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_8
+2025-07-11 19:01:58,589 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_6/pom.xml
+2025-07-11 19:01:58,589 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_6
+2025-07-11 19:01:59,725 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_6
+2025-07-11 19:01:59,725 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_10/pom.xml
+2025-07-11 19:01:59,726 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_10
+2025-07-11 19:02:00,899 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_10
+2025-07-11 19:02:00,899 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-embedded/pom.xml
+2025-07-11 19:02:00,900 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-embedded
+2025-07-11 19:02:02,035 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-embedded
+2025-07-11 19:02:02,035 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-DSE_4-8/pom.xml
+2025-07-11 19:02:02,036 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-DSE_4-8
+2025-07-11 19:02:03,180 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-DSE_4-8
+2025-07-11 19:02:03,180 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-2_1/pom.xml
+2025-07-11 19:02:03,180 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-2_1
+2025-07-11 19:02:04,321 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-2_1
+2025-07-11 19:02:04,321 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-junit/pom.xml
+2025-07-11 19:02:04,322 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-junit
+2025-07-11 19:02:05,452 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/achilles-junit
+2025-07-11 19:02:05,452 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-DSE_5-0-0/pom.xml
+2025-07-11 19:02:05,454 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-DSE_5-0-0
+2025-07-11 19:02:06,584 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-DSE_5-0-0
+2025-07-11 19:02:06,584 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_2/pom.xml
+2025-07-11 19:02:06,585 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_2
+2025-07-11 19:02:07,727 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/Achilles/integration-test-3_2
+2025-07-11 19:02:07,727 - INFO - Running Maven dependency tree analysis...
+2025-07-11 19:02:21,034 - INFO - Dependency tree analysis completed. Check dependency-tree.txt for details.
+2025-07-11 19:02:21,034 - INFO - POM maintenance completed
+2025-07-11 19:05:45,432 - INFO - Starting POM maintenance for directory: data/projects/batch-import-graphene
+2025-07-11 19:05:45,432 - INFO - Searching for tools.jar references in POM files...
+2025-07-11 19:05:45,434 - INFO - Scanning for pom.xml files in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/batch-import-graphene
+2025-07-11 19:05:45,435 - INFO - Found 1 pom.xml files
+2025-07-11 19:05:45,435 - INFO - Starting processing of 1 POM files
+2025-07-11 19:05:45,435 - INFO - Processing: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/batch-import-graphene/pom.xml
+2025-07-11 19:05:45,436 - INFO - Running Maven versions update in: /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/batch-import-graphene
+2025-07-11 19:05:47,209 - INFO - Successfully updated plugins in /Users/keanu/code/Testcase-Adaptation-LLM/data/projects/batch-import-graphene
+2025-07-11 19:05:47,209 - INFO - Running Maven dependency tree analysis...
+2025-07-11 19:05:48,396 - INFO - Dependency tree analysis completed. Check dependency-tree.txt for details.
+2025-07-11 19:05:48,396 - INFO - POM maintenance completed

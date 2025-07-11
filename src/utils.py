@@ -163,6 +163,91 @@ def parse_maven_error(error_output: str) -> dict:
     }  # Return first 500 chars if unknown
 
 
+def parse_gradle_error(error_output: str) -> dict:
+    """
+    Parses Gradle error output to extract compilation error information.
+
+    Args:
+        error_output (str): The raw error output from Gradle build
+
+    Returns:
+        dict: Parsed error information with keys like 'error_type', 'symbol_name', etc.
+    """
+    if not error_output:
+        return {"error_type": "unknown", "message": "No error output provided"}
+
+    # Check for environment errors first
+    if "Command not found" in error_output or "not found" in error_output:
+        return {
+            "error_type": "environment_error",
+            "message": "Gradle command not found. Please install Gradle.",
+        }
+
+    # Gradle "cannot find symbol" errors
+    cannot_find_symbol_match = re.search(
+        r"error: cannot find symbol\s*\n.*symbol:\s*(\w+)\s+(\w+)\s*\n.*location:\s*(.*)",
+        error_output,
+        re.MULTILINE | re.DOTALL,
+    )
+    if cannot_find_symbol_match:
+        return {
+            "error_type": "cannot find symbol",
+            "symbol_type": cannot_find_symbol_match.group(1),
+            "symbol_name": cannot_find_symbol_match.group(2),
+            "location": cannot_find_symbol_match.group(3).strip(),
+            "raw_message": cannot_find_symbol_match.group(0),
+        }
+
+    # Gradle "package does not exist" errors
+    package_not_exist_match = re.search(
+        r"error: package ([\w.]+) does not exist", error_output
+    )
+    if package_not_exist_match:
+        return {
+            "error_type": "package does not exist",
+            "package_name": package_not_exist_match.group(1),
+            "raw_message": package_not_exist_match.group(0),
+        }
+
+    # Gradle compilation failure pattern
+    if "Compilation failed" in error_output or "FAILED" in error_output:
+        return {
+            "error_type": "compilation_error",
+            "message": "Gradle compilation failed",
+            "raw_message": error_output,
+        }
+
+    # If no specific pattern matches, return unknown error
+    return {
+        "error_type": "unknown",
+        "message": "Could not parse Gradle error",
+        "raw_message": error_output,
+    }
+
+
+def parse_build_error(error_output: str, build_system: str) -> dict:
+    """
+    Parses build error output based on the build system.
+
+    Args:
+        error_output (str): The raw error output from the build
+        build_system (str): The build system ('maven' or 'gradle')
+
+    Returns:
+        dict: Parsed error information
+    """
+    if build_system == "maven":
+        return parse_maven_error(error_output)
+    elif build_system == "gradle":
+        return parse_gradle_error(error_output)
+    else:
+        return {
+            "error_type": "unknown",
+            "message": f"Unknown build system: {build_system}",
+            "raw_message": error_output,
+        }
+
+
 def extract_java_code_from_llm_response(llm_response: str) -> str | None:
     """
     Extracts a Java code block from the LLM's markdown response.
@@ -302,6 +387,43 @@ def get_code_from_github(
     except requests.exceptions.RequestException as e:
         print(f"An error occurred while requesting the file from GitHub: {e}")
         return None
+
+
+def extract_gradle_code_from_llm_response(llm_response: str) -> str | None:
+    """
+    Extracts a Gradle build file code block from the LLM's markdown response.
+
+    Args:
+        llm_response (str): The markdown-formatted response from the LLM.
+
+    Returns:
+        str | None: The extracted Gradle code as a string, or None if not found.
+    """
+    # Try different patterns for Gradle code blocks
+    patterns = [
+        r"```gradle\s*([\s\S]+?)\s*```",
+        r"```groovy\s*([\s\S]+?)\s*```",
+        r"```kotlin\s*([\s\S]+?)\s*```",  # For build.gradle.kts
+        r"```\s*([\s\S]+?)\s*```",  # Generic fallback
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, llm_response, re.DOTALL)
+        if match:
+            content = match.group(1).strip()
+            # Basic validation that it looks like a Gradle file
+            if any(
+                keyword in content
+                for keyword in [
+                    "plugins",
+                    "dependencies",
+                    "repositories",
+                    "apply plugin",
+                ]
+            ):
+                return content
+
+    return None
 
 
 if __name__ == "__main__":

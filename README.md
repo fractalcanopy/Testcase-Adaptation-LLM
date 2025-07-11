@@ -7,21 +7,25 @@ This project is a Python-based prototype tool designed to automate the adaptatio
 The tool follows these main steps:
 
 1.  **Input:**
+
     - A specific Java unit test case (as source code).
     - The target Java project's relevant source code (Unit Under Test - UUT).
     - Supports both local dummy projects and real dataset processing.
     - Designed with the Mukelabai et al. ASE 2023 benchmark dataset in mind.
 
 2.  **Pre-Build Validation:**
+
     - Validates that the target project builds correctly before adaptation.
     - Automatically attempts to fix common build configuration issues (pom.xml).
     - Records pre-build success/failure in metrics.
 
 3.  **Initial Adaptation Attempt:**
+
     - Places the source test case into the target project with correct package structure.
     - Attempts initial compilation.
 
 4.  **Iterative Build & LLM Analysis:**
+
     - Supports multiple adaptation attempts (configurable, default: 3).
     - On build failure:
       - Parses Maven error messages with detailed categorization.
@@ -79,11 +83,13 @@ Testcase-Adaptation-LLM/
 ## Key Features
 
 ### Advanced Error Parsing
+
 - Categorizes Maven compilation errors (cannot find symbol, package does not exist, etc.)
 - Extracts specific error details (symbol names, locations, types)
 - Handles environment errors and unknown error types gracefully
 
 ### LLM Integration
+
 - Context-aware prompt construction including:
   - Original test case code
   - Target class implementation
@@ -93,6 +99,7 @@ Testcase-Adaptation-LLM/
 - Clone type classification extraction (Type-1 through Type-4)
 
 ### Metrics and Performance Tracking
+
 - **Adaptation Success Rates:** Overall and per-attempt success tracking
 - **Error Analysis:** Distribution of error types and patterns
 - **LLM Usage Metrics:** Response lengths and classification accuracy
@@ -100,6 +107,7 @@ Testcase-Adaptation-LLM/
 - **Build Configuration:** Pre-build failures and automatic fixes applied
 
 ### Dataset Processing
+
 - GitHub API integration for fetching source test cases
 - Support for processing benchmark datasets
 - Batch processing capabilities for multiple test case adaptations
@@ -107,23 +115,27 @@ Testcase-Adaptation-LLM/
 ## Setup and Installation
 
 1.  **Clone the repository:**
+
     ```bash
     git clone <repository-url>
     cd Testcase-Adaptation-LLM
     ```
 
 2.  **Create and activate a virtual environment:**
+
     ```bash
     python3 -m venv venv
     source venv/bin/activate  # On Windows: venv\Scripts\activate
     ```
 
 3.  **Install dependencies:**
+
     ```bash
     pip install -r requirements.txt
     ```
 
 4.  **Set up API Keys:**
+
     - Create a `.env` file in the project root (`Testcase-Adaptation-LLM/.env`).
     - Add your API keys to the `.env` file:
       ```env
@@ -156,6 +168,7 @@ In `main.py`, set `USE_DUMMY_PROJECTS = True` for testing with dummy projects, o
 For real dataset processing:
 
 1. **Clone target repositories:**
+
    ```bash
    mkdir -p data/projects
    git clone https://github.com/dbrambilla/jesque.git data/projects/jesque
@@ -174,6 +187,7 @@ python -c "from metrics_tracker import global_metrics; global_metrics.print_summ
 ```
 
 Metrics are automatically saved to `adaptation_metrics.json` with detailed statistics including:
+
 - Success rates and attempt distributions
 - Error type categorization
 - Clone classification results
@@ -205,15 +219,19 @@ Metrics are automatically saved to `adaptation_metrics.json` with detailed stati
 ## Advanced Features
 
 ### Multiple Adaptation Attempts
+
 The tool supports up to 3 adaptation attempts by default, using iterative LLM feedback to refine solutions.
 
 ### Automatic Build Configuration Fixes
+
 Automatically detects and attempts to fix common Maven build issues, particularly pom.xml configuration problems.
 
 ### Clone Type Classification
+
 Extracts and records clone type classifications (Type-1 through Type-4) from LLM responses for research analysis.
 
 ### GitHub Integration
+
 Direct integration with GitHub API for fetching source test cases from repositories, enabling seamless dataset processing.
 
 ## Development Notes

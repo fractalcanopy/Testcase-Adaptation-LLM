@@ -2,71 +2,117 @@ import os
 from dotenv import load_dotenv
 
 
+def construct_gradle_fix_prompt(error_output: str, gradle_content: str) -> str:
+    """
+    Constructs a prompt for the LLM to fix Gradle build configuration issues.
+
+    Args:
+        error_output (str): The error output from the Gradle build
+        gradle_content (str): The content of the current build.gradle file
+
+    Returns:
+        str: The constructed prompt for the LLM
+    """
+    prompt = f"""
+You are a Java build system expert. A Gradle project is failing to build with the following error:
+
+ERROR OUTPUT:
+{error_output}
+
+CURRENT BUILD.GRADLE:
+{gradle_content}
+
+Please provide a corrected version of the build.gradle file that addresses the build error. 
+Focus on common issues like:
+- Missing or incorrect dependencies
+- Wrong Java version configuration
+- Missing plugins
+- Incorrect repository configurations
+- Version compatibility issues
+
+Provide your response with the corrected build.gradle file in a ```gradle code block.
+Only provide the corrected build.gradle content, no additional explanation.
+"""
+    return prompt
+
+
 def construct_llm_prompt(
     original_test_case_code: str,
     parsed_build_error: str,
     target_class_code: str,
-    target_class_name: str = "the relevant class",  # Optional: to make the prompt more specific
+    target_class_name: str,
     build_file_content: str | None = None,
     build_file_name: str = "build file",
 ) -> str:
     """
-    Assembles a structured prompt for an LLM to suggest fixes for a failing Java test case.
+    Constructs a comprehensive prompt for the LLM to suggest test case adaptations.
+    Updated to support both Maven and Gradle projects.
 
     Args:
-        original_test_case_code (str): The source code of the original Java test case.
-        parsed_build_error (str): The parsed build error message from the target project.
-        target_class_code (str): The source code of the relevant class(es) in the target project.
-        target_class_name (str, optional): The name of the target class, for a more specific prompt.
-                                           Defaults to "the relevant class".
-        build_file_content (str | None, optional): The content of the build file (e.g., pom.xml). Defaults to None.
-        build_file_name (str, optional): The name of the build file. Defaults to "build file".
+        original_test_case_code (str): The Java test case code that failed to compile.
+        parsed_build_error (str): The parsed error message from the build system.
+        target_class_code (str): The source code of the target class being tested.
+        target_class_name (str): The name of the target class file.
+        build_file_content (str | None): The content of the build configuration file (pom.xml or build.gradle).
+        build_file_name (str): The name of the build file (e.g., "pom.xml" or "build.gradle").
 
     Returns:
-        str: A formatted prompt string for the LLM.
+        str: The constructed prompt string for the LLM.
     """
-    prompt = f"""The following Java test case failed to compile in a target project:
-```java
-{original_test_case_code}
-```
----
-The build error was:
-```
-{parsed_build_error}
-```
----
-Here is the relevant code from the target project's {target_class_name}:
-```java
-{target_class_code}
-```
-"""
+    build_system = "Maven" if "pom.xml" in build_file_name else "Gradle" if "build.gradle" in build_file_name else "unknown"
+    
+    # Determine test framework from build file
+    test_framework = "JUnit"
     if build_file_content:
-        lang = (
-            "xml"
-            if "pom.xml" in build_file_name.lower()
-            else "groovy"
-            if "build.gradle" in build_file_name.lower()
-            else ""
-        )
-        prompt += f"""---
-Here is the content of the target project's build file ({build_file_name}):
-```{lang}
+        if "junit-jupiter" in build_file_content or "junit:junit" in build_file_content:
+            test_framework = "JUnit"
+        elif "testng" in build_file_content:
+            test_framework = "TestNG"
+        elif "spock" in build_file_content:
+            test_framework = "Spock"
+
+    build_context = ""
+    if build_file_content:
+        build_context = f"""
+BUILD CONFIGURATION ({build_file_name}):
 {build_file_content}
-```
 """
 
-    prompt += """---
-Please analyze the build error in the context of the provided test case, target class code, and build file.
-Suggest specific modifications to the *test case code only* to fix the build error and make it compatible with the target project's class.
+    prompt = f"""
+You are a Java testing expert specializing in test case adaptation for {build_system} projects.
 
-After suggesting the changes, classify the relationship between the original and the modified test case as a code clone of Type-1, Type-2, Type-3, or Type-4 based on these definitions:
-- **Type-1:** Exact copy, only whitespace or comments differ.
-- **Type-2:** Syntactically identical, but with changes in variable names, types, or literals.
-- **Type-3:** Copied with further modifications like adding, removing, or changing statements.
-- **Type-4:** Semantically similar code that achieves the same goal but with different syntax.
+I have a Java test case that fails to compile in the target project. Your task is to modify the test case code to make it compatible with the target project while preserving the original test intent.
 
-Explain shortly why the changes are necessary and your reasoning for the classification.
-Provide ONLY the modified test case code.
+BUILD ERROR:
+{parsed_build_error}
+
+ORIGINAL TEST CASE:
+{original_test_case_code}
+
+TARGET CLASS CODE ({target_class_name}):
+{target_class_code}
+{build_context}
+
+Please analyze the error and provide a corrected version of the test case that:
+1. Fixes the compilation error
+2. Maintains the original test intent and behavior
+3. Uses the appropriate testing framework ({test_framework})
+4. Follows Java best practices
+5. Is compatible with the target project structure
+
+Important considerations:
+- Look for method signature changes, class name changes, or package structure differences
+- Ensure proper imports are included
+- Maintain the same test assertions and logic where possible
+- If the target class has different method names or signatures, adapt the test accordingly
+
+Classification: Please also classify the type of adaptation needed as one of:
+- Type-1: Identical code (no changes needed)
+- Type-2: Renamed identifiers (method names, variable names, etc.)
+- Type-3: Added/removed statements
+- Type-4: Semantic changes (different logic/approach)
+
+Provide your response with the corrected Java test case in a ```java code block, followed by the classification.
 """
     return prompt
 

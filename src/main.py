@@ -4,12 +4,24 @@ from dotenv import load_dotenv
 
 from .utils import (
     parse_maven_error,
+    parse_gradle_error,
+    parse_build_error,
     extract_java_code_from_llm_response,
-    extract_xml_code_from_llm_response,  # Import the new function
+    extract_xml_code_from_llm_response,
+    extract_gradle_code_from_llm_response,  # Add this import
     get_code_from_github,
 )
-from .java_env_manager import invoke_maven_build
-from .llm_analyzer import construct_llm_prompt, construct_pom_fix_prompt
+from .java_env_manager import (
+    invoke_maven_build,
+    invoke_gradle_build,
+    invoke_build,
+    detect_build_system,
+)  # Add these imports
+from .llm_analyzer import (
+    construct_llm_prompt,
+    construct_pom_fix_prompt,
+    construct_gradle_fix_prompt,
+)  # Add gradle prompt function
 from .metrics_tracker import global_metrics
 
 
@@ -56,10 +68,11 @@ def main(
     source_test_origin_path: str,
     target_project_path: str,
     target_class_relative_path: str,
-    max_attempts: int = 3,  # NEW: allow multiple adaptation attempts
+    max_attempts: int = 3,
 ):
     """
     Main orchestrator for the test case adaptation workflow.
+    Supports both Maven and Gradle projects.
 
     Args:
         original_test_case_code (str): The content of the source Java test case file.
@@ -102,114 +115,212 @@ def main(
     print(
         f"\n--- Pre-Build Check: Verifying target project '{target_project_path}' builds correctly ---"
     )
-    return_code, stdout_str, stderr_str = invoke_maven_build(target_project_path)
+
+    # Detect build system
+    build_system = detect_build_system(target_project_path)
+    print(f"Detected build system: {build_system}")
+
+    if build_system == "unknown":
+        print(
+            "Error: Could not detect build system. Project must have pom.xml (Maven) or build.gradle (Gradle)."
+        )
+        global_metrics.record_pre_build_result(False, False)
+        global_metrics.finish_tracking()
+        return
+
+    return_code, stdout_str, stderr_str = invoke_build(
+        target_project_path, build_system
+    )
     pom_fix_applied = False
+    gradle_fix_applied = False
 
     if return_code != 0:
-        print("Pre-build check FAILED. The target project does not compile on its own.")
-
-        # Try building with Java 8 first
-        print("Attempting to build with Java 8...")
-        java_8_success = set_java_8_environment()
-
-        if java_8_success:
-            print("Java 8 environment set. Re-running build...")
-            return_code, stdout_str, stderr_str = invoke_maven_build(
-                target_project_path
-            )
-
-            if return_code == 0:
-                print("SUCCESS: Pre-build check passed with Java 8.")
-                global_metrics.record_pre_build_result(True, False)
-                # Continue with the rest of the workflow...
-            else:
-                print(
-                    "Build still fails with Java 8. Attempting to fix the build configuration (pom.xml)..."
-                )
-                # Continue with LLM fix attempt...
-        else:
-            print(
-                "Could not set Java 8 environment. Attempting to fix the build configuration (pom.xml)..."
-            )
+        print(
+            f"Pre-build check FAILED. The target {build_system} project does not compile on its own."
+        )
 
         # Only proceed with LLM fix if Java 8 didn't work
         if return_code != 0:
-            # Parse error
-            parsed_error = parse_maven_error(stdout_str if stdout_str else stderr_str)
+            # Parse error based on build system
+            parsed_error = parse_build_error(
+                stdout_str if stdout_str else stderr_str, build_system
+            )
             error_for_prompt = parsed_error.get("raw_message", stderr_str)
 
-            # Read pom.xml
-            pom_path = os.path.join(target_project_path, "pom.xml")
-            pom_content = read_file_content(pom_path)
+            # Read build file based on build system
+            if build_system == "maven":
+                build_file_path = os.path.join(target_project_path, "pom.xml")
+                build_file_content = read_file_content(build_file_path)
 
-            if pom_content and error_for_prompt:
-                # Construct prompt to fix pom.xml
-                pom_fix_prompt = construct_pom_fix_prompt(error_for_prompt, pom_content)
+                if build_file_content and error_for_prompt:
+                    # Construct prompt to fix pom.xml
+                    build_fix_prompt = construct_pom_fix_prompt(
+                        error_for_prompt, build_file_content
+                    )
 
-                # Query LLM
-                try:
-                    import google.generativeai as genai
+                    # Query LLM and apply fix
+                    try:
+                        import google.generativeai as genai
 
-                    genai.configure(api_key=gemini_api_key)
-                    model = genai.GenerativeModel("gemini-1.5-flash")
-                    response = model.generate_content(pom_fix_prompt)
-                    llm_suggestion = response.text
+                        genai.configure(api_key=gemini_api_key)
+                        model = genai.GenerativeModel("gemini-1.5-flash")
+                        response = model.generate_content(build_fix_prompt)
+                        llm_suggestion = response.text
 
-                    # Extract and apply fix
-                    suggested_pom = extract_xml_code_from_llm_response(llm_suggestion)
-                    print("\n--- LLM Suggested pom.xml Fix ---")
-                    print("--------------------------------------------------")
-                    print(suggested_pom)
-                    print("--------------------------------------------------")
-                    if suggested_pom:
-                        print(
-                            "LLM suggested a fix for pom.xml. Applying and re-building..."
+                        # Extract and apply fix
+                        suggested_build_file = extract_xml_code_from_llm_response(
+                            llm_suggestion
                         )
-                        with open(pom_path, "w", encoding="utf-8") as f:
-                            f.write(suggested_pom)
-                        pom_fix_applied = True
-
-                        # Re-build to verify the fix
-                        return_code, _, stderr_str = invoke_maven_build(
-                            target_project_path
-                        )
-                        if return_code == 0:
+                        print("\n--- LLM Suggested pom.xml Fix ---")
+                        print("--------------------------------------------------")
+                        print(suggested_build_file)
+                        print("--------------------------------------------------")
+                        if suggested_build_file:
                             print(
-                                "SUCCESS: Pre-build check passed after fixing pom.xml."
+                                "LLM suggested a fix for pom.xml. Applying and re-building..."
                             )
+                            with open(build_file_path, "w", encoding="utf-8") as f:
+                                f.write(suggested_build_file)
+                            pom_fix_applied = True
+
+                            # Re-build to verify the fix
+                            return_code, _, stderr_str = invoke_build(
+                                target_project_path, build_system
+                            )
+                            if return_code == 0:
+                                print(
+                                    "SUCCESS: Pre-build check passed after fixing pom.xml."
+                                )
+                            else:
+                                print(
+                                    "FAILURE: Pre-build check failed again after applying pom.xml fix."
+                                )
+                                print(f"Error:\n{stderr_str}")
+                                print("Aborting workflow.")
+                                global_metrics.record_pre_build_result(
+                                    False, pom_fix_applied
+                                )
+                                global_metrics.finish_tracking()
+                                return
                         else:
                             print(
-                                "FAILURE: Pre-build check failed again after applying pom.xml fix."
+                                "LLM did not provide a valid pom.xml fix. Aborting workflow."
                             )
-                            print(f"Error:\n{stderr_str}")
-                            print("Aborting workflow.")
                             global_metrics.record_pre_build_result(
                                 False, pom_fix_applied
                             )
                             global_metrics.finish_tracking()
                             return
-                    else:
-                        print(
-                            "LLM did not provide a valid pom.xml fix. Aborting workflow."
-                        )
+                    except Exception as e:
+                        print(f"An error occurred while trying to fix pom.xml: {e}")
                         global_metrics.record_pre_build_result(False, pom_fix_applied)
                         global_metrics.finish_tracking()
                         return
-                except Exception as e:
-                    print(f"An error occurred while trying to fix pom.xml: {e}")
-                    global_metrics.record_pre_build_result(False, pom_fix_applied)
-                    global_metrics.finish_tracking()
-                    return
-            else:
-                print("Could not read pom.xml or build error. Aborting workflow.")
-                global_metrics.record_pre_build_result(False, pom_fix_applied)
+
+            elif build_system == "gradle":
+                # Try both build.gradle and build.gradle.kts
+                gradle_file_path = os.path.join(target_project_path, "build.gradle")
+                if not os.path.exists(gradle_file_path):
+                    gradle_file_path = os.path.join(
+                        target_project_path, "build.gradle.kts"
+                    )
+
+                build_file_content = read_file_content(gradle_file_path)
+
+                if build_file_content and error_for_prompt:
+                    # Construct prompt to fix build.gradle
+                    build_fix_prompt = construct_gradle_fix_prompt(
+                        error_for_prompt, build_file_content
+                    )
+
+                    # Query LLM and apply fix
+                    try:
+                        import google.generativeai as genai
+
+                        genai.configure(api_key=gemini_api_key)
+                        model = genai.GenerativeModel("gemini-1.5-flash")
+                        response = model.generate_content(build_fix_prompt)
+                        llm_suggestion = response.text
+
+                        # Extract and apply fix (assuming gradle files are in code blocks)
+                        # For Gradle projects, use the new extraction function
+                        if build_system == "gradle":
+                            # Extract Gradle build file content
+                            suggested_build_file = (
+                                extract_gradle_code_from_llm_response(llm_suggestion)
+                            )
+                            if not suggested_build_file:
+                                # Fallback to generic code extraction
+                                suggested_build_file = (
+                                    extract_java_code_from_llm_response(llm_suggestion)
+                                )
+
+                        print("\n--- LLM Suggested build.gradle Fix ---")
+                        print("--------------------------------------------------")
+                        print(suggested_build_file)
+                        print("--------------------------------------------------")
+                        if suggested_build_file:
+                            print(
+                                "LLM suggested a fix for build.gradle. Applying and re-building..."
+                            )
+                            with open(gradle_file_path, "w", encoding="utf-8") as f:
+                                f.write(suggested_build_file)
+                            gradle_fix_applied = True
+
+                            # Re-build to verify the fix
+                            return_code, _, stderr_str = invoke_build(
+                                target_project_path, build_system
+                            )
+                            if return_code == 0:
+                                print(
+                                    "SUCCESS: Pre-build check passed after fixing build.gradle."
+                                )
+                            else:
+                                print(
+                                    "FAILURE: Pre-build check failed again after applying build.gradle fix."
+                                )
+                                print(f"Error:\n{stderr_str}")
+                                print("Aborting workflow.")
+                                global_metrics.record_pre_build_result(
+                                    False, gradle_fix_applied
+                                )
+                                global_metrics.finish_tracking()
+                                return
+                        else:
+                            print(
+                                "LLM did not provide a valid build.gradle fix. Aborting workflow."
+                            )
+                            global_metrics.record_pre_build_result(
+                                False, gradle_fix_applied
+                            )
+                            global_metrics.finish_tracking()
+                            return
+                    except Exception as e:
+                        print(
+                            f"An error occurred while trying to fix build.gradle: {e}"
+                        )
+                        global_metrics.record_pre_build_result(
+                            False, gradle_fix_applied
+                        )
+                        global_metrics.finish_tracking()
+                        return
+
+            if not build_file_content:
+                print(f"Could not read build file or build error. Aborting workflow.")
+                global_metrics.record_pre_build_result(
+                    False, pom_fix_applied or gradle_fix_applied
+                )
                 global_metrics.finish_tracking()
                 return
     else:
-        print("SUCCESS: Pre-build check passed. Target project builds correctly.")
+        print(
+            f"SUCCESS: Pre-build check passed. Target {build_system} project builds correctly."
+        )
 
     # Record pre-build result
-    global_metrics.record_pre_build_result(return_code == 0, pom_fix_applied)
+    global_metrics.record_pre_build_result(
+        return_code == 0, pom_fix_applied or gradle_fix_applied
+    )
 
     # Step A: Place the test file into the target project with correct package structure
     source_test_filename = os.path.basename(source_test_origin_path)
@@ -254,10 +365,12 @@ def main(
         print(
             f"\nStep B: Attempting to build target project '{target_project_path}'... (Attempt {attempt}/{max_attempts})"
         )
-        return_code, stdout_str, stderr_str = invoke_maven_build(target_project_path)
-        print(f"Maven build return code: {return_code}")
+        return_code, stdout_str, stderr_str = invoke_build(
+            target_project_path, build_system
+        )
+        print(f"{build_system.capitalize()} build return code: {return_code}")
         if stderr_str:
-            print(f"Maven STDERR:\n{stderr_str}")
+            print(f"{build_system.capitalize()} STDERR:\n{stderr_str}")
 
         # Step C: Check build result
         if return_code == 0:
@@ -269,9 +382,11 @@ def main(
                 f"\nStep C: Build failed on attempt {attempt}. Proceeding to LLM analysis."
             )
 
-            # Step D: Parse Maven error
-            print("\nStep D: Parsing Maven error output...")
-            parsed_error = parse_maven_error(stdout_str if stdout_str else stderr_str)
+            # Step D: Parse build error based on build system
+            print(f"\nStep D: Parsing {build_system} error output...")
+            parsed_error = parse_build_error(
+                stdout_str if stdout_str else stderr_str, build_system
+            )
             if not parsed_error or parsed_error.get("error_type") == "unknown":
                 print("Could not parse a specific error, or error type is unknown.")
                 error_for_prompt = stderr_str if stderr_str else stdout_str
@@ -326,9 +441,17 @@ def main(
 
             target_class_name_for_prompt = os.path.basename(target_class_full_path)
 
-            # Step E.1: Read build file (e.g., pom.xml)
+            # Step E.1: Read build file based on build system
             print("\nStep E.1: Reading build file...")
-            build_file_path = os.path.join(target_project_path, "pom.xml")
+            if build_system == "maven":
+                build_file_path = os.path.join(target_project_path, "pom.xml")
+            else:  # gradle
+                build_file_path = os.path.join(target_project_path, "build.gradle")
+                if not os.path.exists(build_file_path):
+                    build_file_path = os.path.join(
+                        target_project_path, "build.gradle.kts"
+                    )
+
             build_file_content = read_file_content(build_file_path)
             build_file_name = os.path.basename(build_file_path)
             if build_file_content is None:
