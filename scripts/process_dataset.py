@@ -118,12 +118,6 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
     """
     Reads the dataset CSV and processes each row to extract and format information.
     """
-    # Set Java 8 environment before processing
-    """
-    if not set_java_8_environment():
-        print("Cannot proceed without JDK 8. Exiting.")
-        return
-    """
     try:
         df = pd.read_csv(file_path, sep=";")
         print(f"Successfully loaded dataset from '{file_path}'.\n")

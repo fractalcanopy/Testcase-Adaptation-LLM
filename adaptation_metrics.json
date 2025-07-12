@@ -2,20 +2,20 @@
   "results": [
     {
       "source_project": "unknown",
-      "source_test_path": "swift-codec/src/test/java/com/facebook/swift/codec/AbstractThriftCodecManagerTest.java",
-      "target_project": "swift",
-      "target_uut_path": "swift-codec/src/main/java/com/facebook/swift/codec/metadata/ThriftCatalog.java",
-      "pre_build_success": false,
+      "source_test_path": "api/src/test/java/org/ocpsoft/rewrite/util/ParseToolsTest.java",
+      "target_project": "rewrite",
+      "target_uut_path": "impl-config/src/main/java/org/ocpsoft/rewrite/bind/parse/CapturingGroup.java",
+      "pre_build_success": true,
       "final_build_success": false,
       "total_attempts": 0,
       "successful_attempt": null,
       "clone_classification": null,
       "initial_error_type": null,
       "final_error_message": null,
-      "execution_time_seconds": 57.387407064437866,
-      "timestamp": "2025-07-09T11:14:03.090609",
+      "execution_time_seconds": 9.28656792640686,
+      "timestamp": "2025-07-12T23:15:32.741166",
       "gemini_api_used": false,
-      "pom_fix_applied": true,
+      "pom_fix_applied": false,
       "build_failed_initially": false,
       "llm_response_length": null
     }
@@ -24,16 +24,16 @@
     "total_adaptations": 1,
     "successful_adaptations": 0,
     "success_rate": 0.0,
-    "pre_build_failures": 1,
-    "pom_fixes_applied": 1,
+    "pre_build_failures": 0,
+    "pom_fixes_applied": 0,
     "initial_build_failures": 0,
     "llm_usage_count": 0,
     "classification_distribution": {},
     "success_by_attempt": {},
     "error_type_distribution": {},
-    "average_execution_time_seconds": 57.387407064437866,
-    "max_execution_time_seconds": 57.387407064437866,
-    "min_execution_time_seconds": 57.387407064437866
+    "average_execution_time_seconds": 9.28656792640686,
+    "max_execution_time_seconds": 9.28656792640686,
+    "min_execution_time_seconds": 9.28656792640686
   },
-  "generated_at": "2025-07-09T11:15:00.478582"
+  "generated_at": "2025-07-12T23:15:46.229778"
 }

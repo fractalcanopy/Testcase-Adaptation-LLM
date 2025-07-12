@@ -261,6 +261,81 @@ def pre_build_check(
     return return_code, pom_fix_applied, gradle_fix_applied
 
 
+def save_test_file(original_code: str, source_path: str, target_root: str) -> str:
+    """Step A: Write the test into the target project and return its full path."""
+    filename = os.path.basename(source_path)
+    pkg = ""
+    parts = os.path.dirname(source_path.replace("\\", "/")).split("src/test/java/")
+    if len(parts) > 1:
+        pkg = parts[1]
+    dest_dir = os.path.join(target_root, "src", "test", "java", pkg)
+    os.makedirs(dest_dir, exist_ok=True)
+    full_path = os.path.join(dest_dir, filename)
+    with open(full_path, "w", encoding="utf-8") as f:
+        f.write(original_code)
+    print(f"Saved test to {full_path}")
+    return full_path
+
+
+def adaptation_loop(
+    test_file: str,
+    target_root: str,
+    class_relpath: str,
+    build_system: str,
+    max_attempts: int,
+    api_key: str,
+):
+    """Steps B–J: build, parse failures, prompt LLM, rewrite test, repeat."""
+    current_code = open(test_file).read()
+    for attempt in range(1, max_attempts + 1):
+        print(f"\nAttempt {attempt}/{max_attempts}: building…")
+        code, out, err = invoke_build(target_root, build_system)
+        if code == 0:
+            global_metrics.record_adaptation_attempt(attempt, True)
+            print("Build succeeded")
+            return True
+
+        global_metrics.record_adaptation_attempt(attempt, False)
+        parsed = parse_build_error(out or err, build_system)
+        err_msg = parsed.get("message") or parsed.get("raw_message", err or out)
+        print(f"Parsed error: {err_msg}")
+
+        # read target class
+        cls_path = os.path.join(target_root, class_relpath)
+        class_code = open(cls_path, "r", encoding="utf-8").read()
+
+        # build prompt & query LLM
+        prompt = construct_llm_prompt(
+            original_test_case_code=current_code,
+            parsed_build_error=err_msg,
+            target_class_code=class_code,
+            target_class_name=os.path.basename(cls_path),
+            build_file_content=None,
+            build_file_name="",
+        )
+        suggestion = query_llm(prompt, api_key)
+        new_test = extract_java_code_from_llm_response(suggestion)
+        if not new_test:
+            print("No code extracted; aborting.")
+            break
+
+        # write new test and retry
+        with open(test_file, "w", encoding="utf-8") as f:
+            f.write(new_test)
+        current_code = new_test
+
+    print("Adaptation failed after max attempts")
+    return False
+
+
+def query_llm(prompt: str, api_key: str) -> str:
+    import google.generativeai as genai
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    return model.generate_content(prompt).text
+
+
 def main(
     original_test_case_code: str,
     source_test_origin_path: str,
@@ -326,7 +401,6 @@ def main(
         global_metrics.finish_tracking()
         return
 
-    # Pre-build check
     return_code, pom_fix_applied, gradle_fix_applied = pre_build_check(
         target_project_path, build_system, gemini_api_key
     )
@@ -336,234 +410,21 @@ def main(
         return_code == 0, pom_fix_applied or gradle_fix_applied
     )
 
-    # Step A: Place the test file into the target project with correct package structure
-    source_test_filename = os.path.basename(source_test_origin_path)
-    print(
-        f"\nStep A: Saving test file '{source_test_filename}' to target project '{target_project_path}'..."
+    test_file = save_test_file(
+        original_test_case_code,
+        source_test_origin_path,
+        target_project_path,
+    )
+    success = adaptation_loop(
+        test_file,
+        target_project_path,
+        target_class_relative_path,
+        build_system,
+        max_attempts,
+        gemini_api_key,
     )
 
-    # Determine package path from the source path to replicate it in the target
-    package_path = ""
-    path_parts = os.path.dirname(source_test_origin_path.replace("\\", "/")).split(
-        "src/test/java/"
-    )
-    if len(path_parts) > 1:
-        package_path = path_parts[1]
-
-    if not package_path:
-        print(
-            "Warning: Could not determine package path from source. Placing test in 'src/test/java' root."
-        )
-
-    target_test_file_dir = os.path.join(
-        target_project_path, "src", "test", "java", package_path
-    )
-    os.makedirs(target_test_file_dir, exist_ok=True)
-    target_test_file_full_path = os.path.join(
-        target_test_file_dir, source_test_filename
-    )
-
-    try:
-        with open(target_test_file_full_path, "w", encoding="utf-8") as f:
-            f.write(original_test_case_code)
-        print(f"Successfully saved Java test case to: {target_test_file_full_path}")
-    except IOError as e:
-        print(f"Error saving Java test case to {target_test_file_full_path}: {e}")
-        global_metrics.finish_tracking()
-        return
-
-    # --- Adaptation loop ---
-    attempt = 1
-    current_test_code = original_test_case_code
-    while attempt <= max_attempts:
-        print(
-            f"\nStep B: Attempting to build target project '{target_project_path}'... (Attempt {attempt}/{max_attempts})"
-        )
-        return_code, stdout_str, stderr_str = invoke_build(
-            target_project_path, build_system
-        )
-        print(f"{build_system.capitalize()} build return code: {return_code}")
-        if stderr_str:
-            print(f"{build_system.capitalize()} STDERR:\n{stderr_str}")
-
-        # Step C: Check build result
-        if return_code == 0:
-            print(f"\nStep C: Success on attempt {attempt}! Build was successful.")
-            global_metrics.record_adaptation_attempt(attempt, True)
-            break
-        else:
-            print(
-                f"\nStep C: Build failed on attempt {attempt}. Proceeding to LLM analysis."
-            )
-
-            # Step D: Parse build error based on build system
-            print(f"\nStep D: Parsing {build_system} error output...")
-            parsed_error = parse_build_error(
-                stdout_str if stdout_str else stderr_str, build_system
-            )
-            if not parsed_error or parsed_error.get("error_type") == "unknown":
-                print("Could not parse a specific error, or error type is unknown.")
-                error_for_prompt = stderr_str if stderr_str else stdout_str
-                if not error_for_prompt:
-                    error_for_prompt = "No detailed error message captured from build."
-                error_type = "unknown"
-            elif parsed_error.get("error_type") == "environment_error":
-                print(f"Environment error: {parsed_error.get('message')}")
-                print("Cannot proceed with LLM analysis for environment errors.")
-                global_metrics.record_initial_error("environment_error")
-                global_metrics.record_adaptation_attempt(
-                    attempt, False, parsed_error.get("message")
-                )
-                global_metrics.finish_tracking()
-                return
-            else:
-                error_type = parsed_error.get("error_type", "unknown")
-                if parsed_error.get("error_type") == "cannot find symbol":
-                    error_for_prompt = (
-                        f"Cannot find symbol: {parsed_error.get('symbol_type')} {parsed_error.get('symbol_name')}\n"
-                        f"Location: {parsed_error.get('location')}"
-                    )
-                else:
-                    error_for_prompt = parsed_error.get(
-                        "message",
-                        parsed_error.get(
-                            "raw_message", "No specific error message parsed."
-                        ),
-                    )
-
-            # Record initial error type (only for first attempt)
-            if attempt == 1:
-                global_metrics.record_initial_error(error_type)
-
-            print(f"Parsed error for prompt: {error_for_prompt}")
-
-            # Step E: Read content of the relevant target class file
-            print("\nStep E: Reading target class code...")
-            target_class_full_path = os.path.join(
-                target_project_path, target_class_relative_path
-            )
-            target_class_code = read_file_content(target_class_full_path)
-            if target_class_code is None:
-                print(
-                    f"Could not read target class file at {target_class_full_path}. Cannot proceed with LLM analysis."
-                )
-                global_metrics.record_adaptation_attempt(
-                    attempt, False, "Could not read target class file"
-                )
-                global_metrics.finish_tracking()
-                return
-
-            target_class_name_for_prompt = os.path.basename(target_class_full_path)
-
-            # Step E.1: Read build file based on build system
-            print("\nStep E.1: Reading build file...")
-            if build_system == "maven":
-                build_file_path = os.path.join(target_project_path, "pom.xml")
-            else:  # gradle
-                build_file_path = os.path.join(target_project_path, "build.gradle")
-                if not os.path.exists(build_file_path):
-                    build_file_path = os.path.join(
-                        target_project_path, "build.gradle.kts"
-                    )
-
-            build_file_content = read_file_content(build_file_path)
-            build_file_name = os.path.basename(build_file_path)
-            if build_file_content is None:
-                print(
-                    f"Could not read build file at {build_file_path}. Proceeding without it."
-                )
-                build_file_name = "build file"
-
-            # Step F: Construct LLM prompt
-            print("\nStep F: Constructing LLM prompt...")
-            llm_prompt = construct_llm_prompt(
-                original_test_case_code=current_test_code,
-                parsed_build_error=error_for_prompt,
-                target_class_code=target_class_code,
-                target_class_name=target_class_name_for_prompt,
-                build_file_content=build_file_content,
-                build_file_name=build_file_name,
-            )
-
-            # Step G: Call LLM API
-            print("\nStep G: Querying LLM for suggestions...")
-            llm_suggestion = ""
-            if not gemini_api_key:
-                print("Gemini API key not available. Skipping LLM query.")
-                llm_suggestion = "Error: Gemini API key not configured."
-                global_metrics.record_adaptation_attempt(attempt, False, "No API key")
-                break
-            else:
-                try:
-                    import google.generativeai as genai
-
-                    genai.configure(api_key=gemini_api_key)
-                    model = genai.GenerativeModel("gemini-1.5-flash")
-                    response = model.generate_content(llm_prompt)
-                    llm_suggestion = response.text
-
-                    # Record LLM usage and extract classification
-                    global_metrics.record_llm_usage(llm_suggestion)
-
-                except Exception as e:
-                    print(f"Error during LLM API call: {e}")
-                    llm_suggestion = f"Error during LLM API call: {e}"
-                    global_metrics.record_adaptation_attempt(attempt, False, str(e))
-                    break
-
-            # Step H: Print raw LLM suggestion
-            print("\nStep H: Raw LLM Suggestion:")
-            print("--------------------------------------------------")
-            print(llm_suggestion)
-            print("--------------------------------------------------")
-
-            # Step I: Extract code from LLM response
-            print("\nStep I: Extracting Java code from LLM response...")
-            suggested_java_code = extract_java_code_from_llm_response(llm_suggestion)
-
-            if suggested_java_code:
-                print("Successfully extracted Java code from LLM response.")
-
-                # Step J: Apply LLM suggestion and re-build
-                print(
-                    f"\nStep J: Applying LLM suggestion to '{target_test_file_full_path}' and re-building..."
-                )
-                try:
-                    with open(target_test_file_full_path, "w", encoding="utf-8") as f:
-                        f.write(suggested_java_code)
-                    print(
-                        f"Successfully updated test file with LLM suggestion: {target_test_file_full_path}"
-                    )
-                    current_test_code = (
-                        suggested_java_code  # Use new code for next prompt if needed
-                    )
-                except IOError as e:
-                    print(f"Error writing suggested Java code to file: {e}")
-                    global_metrics.record_adaptation_attempt(attempt, False, str(e))
-                    break
-            else:
-                print("No Java code block found in LLM suggestion. Cannot apply fix.")
-                global_metrics.record_adaptation_attempt(
-                    attempt, False, "No code block found in LLM response"
-                )
-                break
-
-        attempt += 1
-
-    # Record final attempt result if we exited the loop due to max attempts
-    if return_code != 0 and attempt > max_attempts:
-        global_metrics.record_adaptation_attempt(
-            max_attempts, False, "Max attempts exceeded"
-        )
-
-    if return_code != 0:
-        print(
-            f"\n--- Test Adaptation Workflow Finished: Build failed after {max_attempts} attempts ---"
-        )
-    else:
-        print(f"\n--- Test Adaptation Workflow Finished: Build succeeded ---")  # noqa: F541
-
-    # Finish metrics tracking
+    print("Workflow finished:", "SUCCESS" if success else "FAILURE")
     global_metrics.finish_tracking()
 
 
