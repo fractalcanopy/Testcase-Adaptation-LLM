@@ -63,71 +63,9 @@ def set_java_8_environment():
         return False
 
 
-def main(
-    original_test_case_code: str,
-    source_test_origin_path: str,
-    target_project_path: str,
-    target_class_relative_path: str,
-    max_attempts: int = 3,
-):
-    """
-    Main orchestrator for the test case adaptation workflow.
-    Supports both Maven and Gradle projects.
-
-    Args:
-        original_test_case_code (str): The content of the source Java test case file.
-        source_test_origin_path (str): The original path of the test case (either in a repo or local FS).
-                                       Used to determine package structure.
-        target_project_path (str): Absolute or relative path to the root of the target Java project.
-        target_class_relative_path (str): Relative path of the target class file
-                                           within the target project (e.g., "src/main/java/com/example/Calculator.java").
-        max_attempts (int): Maximum number of LLM adaptation attempts if build keeps failing.
-    """
-    # Start metrics tracking
-    source_project = "unknown"  # Will be set by process_dataset.py
-    target_project = os.path.basename(target_project_path)
-    global_metrics.start_tracking(
-        source_project,
-        source_test_origin_path,
-        target_project,
-        target_class_relative_path,
-    )
-
-    print(f"--- Starting Test Adaptation Workflow ---")  # noqa: F541
-    print(f"Source Test Origin: {source_test_origin_path}")
-    print(f"Target Project Path: {target_project_path}")
-    print(f"Target Class Relative Path: {target_class_relative_path}")
-
-    # Step 0: Load environment variables (for API keys)
-    load_dotenv()
-    gemini_api_key = os.getenv("GEMINI_API_KEY")
-    if not gemini_api_key:
-        print(
-            "Error: GEMINI_API_KEY not found in .env file. Please set it to use the Gemini API."
-        )
-
-    if not original_test_case_code:
-        print("Exiting due to empty source test case code.")
-        global_metrics.finish_tracking()
-        return
-
-    # --- Pre-Build Check ---
-    print(
-        f"\n--- Pre-Build Check: Verifying target project '{target_project_path}' builds correctly ---"
-    )
-
-    # Detect build system
-    build_system = detect_build_system(target_project_path)
-    print(f"Detected build system: {build_system}")
-
-    if build_system == "unknown":
-        print(
-            "Error: Could not detect build system. Project must have pom.xml (Maven) or build.gradle (Gradle)."
-        )
-        global_metrics.record_pre_build_result(False, False)
-        global_metrics.finish_tracking()
-        return
-
+def pre_build_check(
+    target_project_path: str, build_system: str, gemini_api_key: str
+) -> tuple[int, bool, bool]:
     return_code, stdout_str, stderr_str = invoke_build(
         target_project_path, build_system
     )
@@ -139,7 +77,6 @@ def main(
             f"Pre-build check FAILED. The target {build_system} project does not compile on its own."
         )
 
-        # Only proceed with LLM fix if Java 8 didn't work
         if return_code != 0:
             # Parse error based on build system
             parsed_error = parse_build_error(
@@ -316,6 +253,83 @@ def main(
         print(
             f"SUCCESS: Pre-build check passed. Target {build_system} project builds correctly."
         )
+        global_metrics.record_pre_build_result(
+            True, pom_fix_applied or gradle_fix_applied
+        )
+        global_metrics.finish_tracking()
+
+    return return_code, pom_fix_applied, gradle_fix_applied
+
+
+def main(
+    original_test_case_code: str,
+    source_test_origin_path: str,
+    target_project_path: str,
+    target_class_relative_path: str,
+    max_attempts: int = 3,
+):
+    """
+    Main orchestrator for the test case adaptation workflow.
+    Supports both Maven and Gradle projects.
+
+    Args:
+        original_test_case_code (str): The content of the source Java test case file.
+        source_test_origin_path (str): The original path of the test case (either in a repo or local FS).
+                                       Used to determine package structure.
+        target_project_path (str): Absolute or relative path to the root of the target Java project.
+        target_class_relative_path (str): Relative path of the target class file
+                                           within the target project (e.g., "src/main/java/com/example/Calculator.java").
+        max_attempts (int): Maximum number of LLM adaptation attempts if build keeps failing.
+    """
+    # Start metrics tracking
+    source_project = "unknown"  # Will be set by process_dataset.py
+    target_project = os.path.basename(target_project_path)
+    global_metrics.start_tracking(
+        source_project,
+        source_test_origin_path,
+        target_project,
+        target_class_relative_path,
+    )
+
+    print(f"--- Starting Test Adaptation Workflow ---")  # noqa: F541
+    print(f"Source Test Origin: {source_test_origin_path}")
+    print(f"Target Project Path: {target_project_path}")
+    print(f"Target Class Relative Path: {target_class_relative_path}")
+
+    # Step 0: Load environment variables (for API keys)
+    load_dotenv()
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_api_key:
+        print(
+            "Error: GEMINI_API_KEY not found in .env file. Please set it to use the Gemini API."
+        )
+
+    if not original_test_case_code:
+        print("Exiting due to empty source test case code.")
+        global_metrics.finish_tracking()
+        return
+
+    # --- Pre-Build Check ---
+    print(
+        f"\n--- Pre-Build Check: Verifying target project '{target_project_path}' builds correctly ---"
+    )
+
+    # Detect build system
+    build_system = detect_build_system(target_project_path)
+    print(f"Detected build system: {build_system}")
+
+    if build_system == "unknown":
+        print(
+            "Error: Could not detect build system. Project must have pom.xml (Maven) or build.gradle (Gradle)."
+        )
+        global_metrics.record_pre_build_result(False, False)
+        global_metrics.finish_tracking()
+        return
+
+    # Pre-build check
+    return_code, pom_fix_applied, gradle_fix_applied = pre_build_check(
+        target_project_path, build_system, gemini_api_key
+    )
 
     # Record pre-build result
     global_metrics.record_pre_build_result(
