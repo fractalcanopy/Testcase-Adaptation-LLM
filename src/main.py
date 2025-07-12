@@ -224,7 +224,7 @@ def pre_build_check(
 
     if return_code != 0:
         print(
-            f"Pre-build check FAILED. The target {build_system} project does not compile on its own."
+            f"Pre-build check FAILED. The target {build_system} project does not compile on its own. Error message: {stdout_str}"
         )
 
         if query_llm:
@@ -421,6 +421,13 @@ def main(
     global_metrics.record_pre_build_result(
         return_code == 0, pom_fix_applied or gradle_fix_applied
     )
+
+    if return_code != 0:
+        print(
+            f"Pre-build check failed with return code {return_code}. Aborting workflow."
+        )
+        global_metrics.finish_tracking()
+        return
 
     test_file = save_test_file(
         original_test_case_code,
