@@ -214,6 +214,7 @@ def pre_build_check(
     gemini_api_key: str,
     query_llm: bool = False,
 ) -> tuple[int, bool, bool]:
+    # Invoke the build process
     return_code, stdout_str, stderr_str = invoke_build(
         target_project_path, build_system
     )
@@ -221,56 +222,53 @@ def pre_build_check(
     pom_fix_applied = False
     gradle_fix_applied = False
 
-    # If query_llm is True, we will try to fix the build issues using LLM
-    if query_llm:
-        if return_code != 0:
-            print(
-                f"Pre-build check FAILED. The target {build_system} project does not compile on its own."
-            )
+    if return_code != 0:
+        print(
+            f"Pre-build check FAILED. The target {build_system} project does not compile on its own."
+        )
 
-            if return_code != 0:
-                # Parse error based on build system
-                parsed_error = parse_build_error(
-                    stdout_str if stdout_str else stderr_str, build_system
+        if query_llm:
+            print(f"Attempting to fix {build_system} build issues using LLM...")
+            # Parse error based on build system
+            parsed_error = parse_build_error(
+                stdout_str if stdout_str else stderr_str, build_system
+            )
+            error_for_prompt = parsed_error.get("raw_message", stderr_str)
+
+            # Read build file based on build system
+            if build_system == "maven":
+                query_llm_for_maven_fix(
+                    target_project_path,
+                    build_system,
+                    error_for_prompt,
+                    gemini_api_key,
                 )
-                error_for_prompt = parsed_error.get("raw_message", stderr_str)
+                pom_fix_applied = True
 
-                # Read build file based on build system
-                if build_system == "maven":
-                    query_llm_for_maven_fix(
-                        target_project_path,
-                        build_system,
-                        error_for_prompt,
-                        gemini_api_key,
-                    )
-                    pom_fix_applied = True
+            elif build_system == "gradle":
+                query_llm_for_gradle_fix(
+                    target_project_path,
+                    build_system,
+                    error_for_prompt,
+                    gemini_api_key,
+                )
+                gradle_fix_applied = True
 
-                elif build_system == "gradle":
-                    query_llm_for_gradle_fix(
-                        target_project_path,
-                        build_system,
-                        error_for_prompt,
-                        gemini_api_key,
-                    )
-                    gradle_fix_applied = True
-
-                else:
-                    print(
-                        f"Could not read build file or build error. Aborting workflow."
-                    )
-                    global_metrics.record_pre_build_result(
-                        False, pom_fix_applied or gradle_fix_applied
-                    )
-                    global_metrics.finish_tracking()
-                    return
-        else:
-            print(
-                f"SUCCESS: Pre-build check passed. Target {build_system} project builds correctly."
-            )
-            global_metrics.record_pre_build_result(
-                True, pom_fix_applied or gradle_fix_applied
-            )
-            global_metrics.finish_tracking()
+            else:
+                print(f"Could not read build file or build error. Aborting workflow.")
+                global_metrics.record_pre_build_result(
+                    False, pom_fix_applied or gradle_fix_applied
+                )
+                global_metrics.finish_tracking()
+                return
+    else:
+        print(
+            f"SUCCESS: Pre-build check passed. Target {build_system} project builds correctly."
+        )
+        global_metrics.record_pre_build_result(
+            True, pom_fix_applied or gradle_fix_applied
+        )
+        global_metrics.finish_tracking()
 
     return return_code, pom_fix_applied, gradle_fix_applied
 

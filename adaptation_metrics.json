@@ -6,14 +6,14 @@
       "target_project": "rewrite",
       "target_uut_path": "impl-config/src/main/java/org/ocpsoft/rewrite/bind/parse/CapturingGroup.java",
       "pre_build_success": true,
-      "final_build_success": false,
-      "total_attempts": 0,
-      "successful_attempt": null,
+      "final_build_success": true,
+      "total_attempts": 1,
+      "successful_attempt": 1,
       "clone_classification": null,
       "initial_error_type": null,
       "final_error_message": null,
-      "execution_time_seconds": 9.28656792640686,
-      "timestamp": "2025-07-12T23:15:32.741166",
+      "execution_time_seconds": 11.678285121917725,
+      "timestamp": "2025-07-12T23:31:10.311090",
       "gemini_api_used": false,
       "pom_fix_applied": false,
       "build_failed_initially": false,
@@ -22,18 +22,20 @@
   ],
   "summary": {
     "total_adaptations": 1,
-    "successful_adaptations": 0,
-    "success_rate": 0.0,
+    "successful_adaptations": 1,
+    "success_rate": 1.0,
     "pre_build_failures": 0,
     "pom_fixes_applied": 0,
     "initial_build_failures": 0,
     "llm_usage_count": 0,
     "classification_distribution": {},
-    "success_by_attempt": {},
+    "success_by_attempt": {
+      "1": 1
+    },
     "error_type_distribution": {},
-    "average_execution_time_seconds": 9.28656792640686,
-    "max_execution_time_seconds": 9.28656792640686,
-    "min_execution_time_seconds": 9.28656792640686
+    "average_execution_time_seconds": 11.678285121917725,
+    "max_execution_time_seconds": 11.678285121917725,
+    "min_execution_time_seconds": 11.678285121917725
   },
-  "generated_at": "2025-07-12T23:15:46.229778"
+  "generated_at": "2025-07-12T23:31:21.989543"
 }
