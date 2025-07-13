@@ -341,14 +341,18 @@ def get_code_from_github(
 
     ref_to_use = commit_sha
 
+    # Prepare authenticated headers if GITHUB_TOKEN is set
+    token = os.environ.get("GITHUB_TOKEN")
+    headers = {}
+    if token:
+        headers["Authorization"] = f"token {token}"
+
     if not ref_to_use:
         # If no commit_sha is provided, find the default branch via GitHub API
         api_url = f"https://api.github.com/repos/{owner_repo.strip('/')}"
         print(f"No commit SHA provided. Fetching default branch from {api_url}...")
         try:
-            # Note: GitHub API has rate limits for unauthenticated requests.
-            # For heavy use, consider adding an authentication token.
-            response = requests.get(api_url)
+            response = requests.get(api_url, headers=headers)
             response.raise_for_status()
             repo_info = response.json()
             default_branch = repo_info.get("default_branch")
@@ -375,7 +379,7 @@ def get_code_from_github(
 
     try:
         print(f"Fetching file from: {raw_url}")
-        response = requests.get(raw_url)
+        response = requests.get(raw_url, headers=headers)
         response.raise_for_status()  # Raises an HTTPError for bad responses (4xx or 5xx)
         return response.text
     except requests.exceptions.HTTPError as e:
