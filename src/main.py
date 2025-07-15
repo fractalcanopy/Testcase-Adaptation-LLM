@@ -273,14 +273,37 @@ def pre_build_check(
     return return_code, pom_fix_applied, gradle_fix_applied
 
 
-def save_test_file(original_code: str, source_path: str, target_root: str) -> str:
-    """Step A: Write the test into the target project and return its full path."""
+def save_test_file(
+    original_code: str,
+    source_path: str,
+    target_root: str,
+    target_class_relpath: str | None = None,
+) -> str:
+    """Write the test into the target project under the same module and package as the target class."""
     filename = os.path.basename(source_path)
     pkg = ""
-    parts = os.path.dirname(source_path.replace("\\", "/")).split("src/test/java/")
-    if len(parts) > 1:
-        pkg = parts[1]
-    dest_dir = os.path.join(target_root, "src", "test", "java", pkg)
+    # If we know the target class path, mirror its package under test
+    if target_class_relpath:
+        class_dir = os.path.dirname(target_class_relpath).replace("\\", "/")
+        parts = class_dir.split("src/main/java/")
+        if len(parts) > 1:
+            base_dir, pkg = parts
+            dest_dir = os.path.join(target_root, base_dir, "src", "test", "java", pkg)
+        else:
+            # fallback to original source-based logic
+            parts = os.path.dirname(source_path.replace("\\", "/")).split(
+                "src/test/java/"
+            )
+            base_dir = parts[0] if len(parts) > 1 else ""
+            pkg = parts[1] if len(parts) > 1 else ""
+            dest_dir = os.path.join(target_root, base_dir, "src", "test", "java", pkg)
+    else:
+        # preserve original source-test location
+        parts = os.path.dirname(source_path.replace("\\", "/")).split("src/test/java/")
+        base_dir = parts[0] if len(parts) > 1 else ""
+        pkg = parts[1] if len(parts) > 1 else ""
+        dest_dir = os.path.join(target_root, base_dir, "src", "test", "java", pkg)
+
     os.makedirs(dest_dir, exist_ok=True)
     full_path = os.path.join(dest_dir, filename)
     with open(full_path, "w", encoding="utf-8") as f:
@@ -326,6 +349,10 @@ def adaptation_loop(
             build_file_name="",
         )
         suggestion = query_llm(prompt, api_key)
+        print("\n--- LLM Suggestion ---")
+        print("--------------------------------------------------")
+        print(suggestion)
+        print("--------------------------------------------------")
         new_test = extract_java_code_from_llm_response(suggestion)
         if not new_test:
             print("No code extracted; aborting.")
@@ -433,6 +460,7 @@ def main(
         original_test_case_code,
         source_test_origin_path,
         target_project_path,
+        target_class_relative_path,
     )
     success = adaptation_loop(
         test_file,
