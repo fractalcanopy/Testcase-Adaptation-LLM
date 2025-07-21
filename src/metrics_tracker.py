@@ -214,6 +214,16 @@ class MetricsTracker:
             sum(execution_times) / len(execution_times) if execution_times else 0
         )
 
+        # NEW: Direct applicability: tests that passed on first attempt without LLM
+        direct_applicable = sum(
+            1
+            for r in self.results
+            if r.successful_attempt == 1 and not r.gemini_api_used
+        )
+        direct_applicability_rate = (
+            direct_applicable / total_adaptations if total_adaptations > 0 else 0
+        )
+
         return {
             "total_adaptations": total_adaptations,
             "successful_adaptations": successful_adaptations,
@@ -234,6 +244,9 @@ class MetricsTracker:
             "min_execution_time_seconds": min(execution_times)
             if execution_times
             else 0,
+            # NEW
+            "direct_applicable_count": direct_applicable,
+            "direct_applicable_rate": direct_applicability_rate,
         }
 
     def print_summary(self) -> None:
@@ -255,23 +268,29 @@ class MetricsTracker:
         print(f"Initial build failures: {stats['initial_build_failures']}")
         print(f"POM fixes applied: {stats['pom_fixes_applied']}")
         print(f"LLM usage count: {stats['llm_usage_count']}")
+        # NEW
+        print(
+            f"Directly applicable (no LLM needed): "
+            f"{stats['direct_applicable_count']} "
+            f"({stats['direct_applicable_rate']:.2%})"
+        )
 
         if stats["classification_distribution"]:
-            print(f"\nClone classification distribution:")  # noqa: F541
+            print(f"\nClone classification distribution:")
             for class_type, count in stats["classification_distribution"].items():
                 print(f"  {class_type}: {count}")
 
         if stats["success_by_attempt"]:
-            print(f"\nSuccess by attempt number:")  # noqa: F541
+            print(f"\nSuccess by attempt number:")
             for attempt, count in sorted(stats["success_by_attempt"].items()):
                 print(f"  Attempt {attempt}: {count}")
 
         if stats["error_type_distribution"]:
-            print(f"\nError type distribution:")  # noqa: F541
+            print(f"\nError type distribution:")
             for error_type, count in stats["error_type_distribution"].items():
                 print(f"  {error_type}: {count}")
 
-        print(f"\nTiming:")  # noqa: F541
+        print(f"\nTiming:")
         print(
             f"  Average execution time: {stats['average_execution_time_seconds']:.2f}s"
         )

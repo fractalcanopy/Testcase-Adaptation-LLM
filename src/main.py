@@ -226,9 +226,8 @@ def pre_build_check(
         print(
             f"Pre-build check FAILED. The target {build_system} project does not compile on its own. Error message: {stdout_str}"
         )
-
         if query_llm:
-            print(f"Attempting to fix {build_system} build issues using LLM...")
+            print(f"Attempting to fix {build_system} build issues using LLM…")
             # Parse error based on build system
             parsed_error = parse_build_error(
                 stdout_str if stdout_str else stderr_str, build_system
@@ -254,22 +253,19 @@ def pre_build_check(
                 )
                 gradle_fix_applied = True
 
-            else:
-                print(f"Could not read build file or build error. Aborting workflow.")
-                global_metrics.record_pre_build_result(
-                    False, pom_fix_applied or gradle_fix_applied
-                )
-                global_metrics.finish_tracking()
-                return
-    else:
-        print(
-            f"SUCCESS: Pre-build check passed. Target {build_system} project builds correctly."
-        )
-        global_metrics.record_pre_build_result(
-            True, pom_fix_applied or gradle_fix_applied
-        )
-        global_metrics.finish_tracking()
-
+            # ... do NOT call global_metrics.finish_tracking() here ...
+            return return_code, pom_fix_applied, gradle_fix_applied
+        else:
+            print("Could not read build file or build error. Aborting workflow.")
+            global_metrics.record_pre_build_result(
+                False, pom_fix_applied or gradle_fix_applied
+            )
+            global_metrics.finish_tracking()
+            return return_code, pom_fix_applied, gradle_fix_applied
+    # Pre‐build succeeded
+    print(
+        f"SUCCESS: Pre-build check passed. Target {build_system} project builds correctly."
+    )
     return return_code, pom_fix_applied, gradle_fix_applied
 
 

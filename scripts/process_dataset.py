@@ -211,7 +211,7 @@ if __name__ == "__main__":
     os.makedirs(projects_dir, exist_ok=True)
 
     if os.path.exists(dataset_file):
-        process_dataset(dataset_file, projects_dir, num_rows=23)
+        process_dataset(dataset_file, projects_dir, num_rows=2)
     else:
         print(f"Dataset file not found at '{dataset_file}'.")
         print("Please ensure the dataset is available at that location.")
