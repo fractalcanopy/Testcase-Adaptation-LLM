@@ -345,6 +345,7 @@ def adaptation_loop(
             build_file_name="",
         )
         suggestion = query_llm(prompt, api_key)
+        global_metrics.record_llm_usage(suggestion)
         print("\n--- LLM Suggestion ---")
         print("--------------------------------------------------")
         print(suggestion)
