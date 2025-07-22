@@ -377,6 +377,8 @@ def main(
     target_project_path: str,
     target_class_relative_path: str,
     max_attempts: int = 3,
+    source_project_name: str | None = None,
+    target_project_name: str | None = None,
 ):
     """
     Main orchestrator for the test case adaptation workflow.
@@ -392,8 +394,8 @@ def main(
         max_attempts (int): Maximum number of LLM adaptation attempts if build keeps failing.
     """
     # Start metrics tracking
-    source_project = "unknown"  # Will be set by process_dataset.py
-    target_project = os.path.basename(target_project_path)
+    source_project = source_project_name or "unknown"
+    target_project = target_project_name or os.path.basename(target_project_path)
     global_metrics.start_tracking(
         source_project,
         source_test_origin_path,
@@ -558,4 +560,6 @@ if __name__ == "__main__":
                 source_test_origin_path=source_test_file_in_repo,
                 target_project_path=target_project_local_path,
                 target_class_relative_path=target_uut_file_in_repo,
+                source_project_name=source_repo,
+                target_project_name=target_repo,
             )
