@@ -59,8 +59,14 @@ def construct_llm_prompt(
     Returns:
         str: The constructed prompt string for the LLM.
     """
-    build_system = "Maven" if "pom.xml" in build_file_name else "Gradle" if "build.gradle" in build_file_name else "unknown"
-    
+    build_system = (
+        "Maven"
+        if "pom.xml" in build_file_name
+        else "Gradle"
+        if "build.gradle" in build_file_name
+        else "unknown"
+    )
+
     # Determine test framework from build file
     test_framework = "JUnit"
     if build_file_content:
@@ -106,13 +112,13 @@ Important considerations:
 - Maintain the same test assertions and logic where possible
 - If the target class has different method names or signatures, adapt the test accordingly
 
-Classification: Please also classify the type of adaptation needed as one of:
+Classification: Please choose exactly one type of adaptation that best describes the change, and do not combine multiple types. Select one of:
 - Type-1: Identical code (no changes needed)
 - Type-2: Renamed identifiers (method names, variable names, etc.)
 - Type-3: Added/removed statements
 - Type-4: Semantic changes (different logic/approach)
 
-Provide your response with the corrected Java test case in a ```java code block, followed by the classification.
+Provide your response with the corrected Java test case in a ```java code block, followed
 """
     return prompt
 
