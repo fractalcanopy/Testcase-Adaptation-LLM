@@ -327,9 +327,26 @@ def adaptation_loop(
             return True
 
         global_metrics.record_adaptation_attempt(attempt, False)
-        parsed = parse_build_error(out or err, build_system)
-        err_msg = parsed.get("message") or parsed.get("raw_message", err or out)
-        print(f"Parsed error: {err_msg}")
+
+        # Improved error parsing with better handling
+        try:
+            parsed = parse_build_error(out or err, build_system)
+            err_msg = parsed.get("message") or parsed.get("raw_message", err or out)
+            print(f"Parsed error: {err_msg}")
+
+            # Check if error is related to dataset file not found
+            if "Dataset file not found" in err_msg:
+                print(
+                    "Build error is related to missing dataset file. This suggests the test is attempting to access the dataset directly."
+                )
+                print(
+                    "Consider modifying the test to use mock data instead of accessing the dataset file directly."
+                )
+                break
+        except Exception as e:
+            print(f"Error parsing build error: {str(e)}")
+            err_msg = err or out
+            print(f"Using raw error message: {err_msg}")
 
         # read target class
         cls_path = os.path.join(target_root, class_relpath)
@@ -367,9 +384,15 @@ def adaptation_loop(
 def query_llm(prompt: str, api_key: str) -> str:
     import google.generativeai as genai
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    return model.generate_content(prompt).text
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        print(f"Error querying LLM API: {str(e)}")
+        # Return a formatted error that won't break the rest of the workflow
+        return f"An error occurred when querying the LLM: {str(e)}"
 
 
 def main(
