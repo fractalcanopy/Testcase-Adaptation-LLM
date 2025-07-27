@@ -1,41 +1,41 @@
 {
   "results": [
     {
-      "source_project": "cpoenisch/dashboard-view-plugin",
-      "source_test_path": "src/test/java/hudson/plugins/view/dashboard/test/TestTrendChartTest.java",
-      "target_project": "cjbush/dashboard-view-plugin",
-      "target_uut_path": "src/main/java/hudson/plugins/view/dashboard/test/TestTrendChart.java",
-      "pre_build_success": false,
+      "source_project": "Allogy/Ektorp",
+      "source_test_path": "org.ektorp/src/test/java/org/ektorp/impl/StdCouchDbConnectorTest.java",
+      "target_project": "dlvenable/Ektorp",
+      "target_uut_path": "org.ektorp/src/main/java/org/ektorp/ViewQuery.java",
+      "pre_build_success": true,
       "final_build_success": false,
-      "total_attempts": 0,
+      "total_attempts": 1,
       "successful_attempt": null,
       "clone_classification": null,
       "initial_error_type": null,
       "final_error_message": null,
-      "execution_time_seconds": 56.37635684013367,
-      "timestamp": "2025-07-26T16:00:27.783454",
-      "gemini_api_used": false,
+      "execution_time_seconds": 59.53530502319336,
+      "timestamp": "2025-07-27T17:27:21.900675",
+      "gemini_api_used": true,
       "pom_fix_applied": false,
-      "build_failed_initially": false,
-      "llm_response_length": null
+      "build_failed_initially": true,
+      "llm_response_length": 28599
     }
   ],
   "summary": {
     "total_adaptations": 1,
     "successful_adaptations": 0,
     "success_rate": 0.0,
-    "pre_build_failures": 1,
+    "pre_build_failures": 0,
     "pom_fixes_applied": 0,
-    "initial_build_failures": 0,
-    "llm_usage_count": 0,
+    "initial_build_failures": 1,
+    "llm_usage_count": 1,
     "classification_distribution": {},
     "success_by_attempt": {},
     "error_type_distribution": {},
-    "average_execution_time_seconds": 56.37635684013367,
-    "max_execution_time_seconds": 56.37635684013367,
-    "min_execution_time_seconds": 56.37635684013367,
+    "average_execution_time_seconds": 59.53530502319336,
+    "max_execution_time_seconds": 59.53530502319336,
+    "min_execution_time_seconds": 59.53530502319336,
     "direct_applicable_count": 0,
     "direct_applicable_rate": 0.0
   },
-  "generated_at": "2025-07-26T16:01:24.160401"
+  "generated_at": "2025-07-27T17:28:21.436334"
 }

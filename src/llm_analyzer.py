@@ -118,7 +118,7 @@ Classification: Please choose exactly one type of adaptation that best describes
 - Type-3: Added/removed statements
 - Type-4: Semantic changes (different logic/approach)
 
-Provide your response with the corrected Java test case in a ```java code block, followed
+Provide your response with the corrected Java test case in a ```java code block (very important).
 """
     return prompt
 

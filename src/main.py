@@ -275,30 +275,24 @@ def save_test_file(
     target_root: str,
     target_class_relpath: str | None = None,
 ) -> str:
-    """Write the test into the target project under the same module and package as the target class."""
+    """Write the test into the target project preserving its source-test directory structure."""
+    import os
+
     filename = os.path.basename(source_path)
-    pkg = ""
-    # If we know the target class path, mirror its package under test
-    if target_class_relpath:
-        class_dir = os.path.dirname(target_class_relpath).replace("\\", "/")
-        parts = class_dir.split("src/main/java/")
-        if len(parts) > 1:
-            base_dir, pkg = parts
-            dest_dir = os.path.join(target_root, base_dir, "src", "test", "java", pkg)
-        else:
-            # fallback to original source-based logic
-            parts = os.path.dirname(source_path.replace("\\", "/")).split(
-                "src/test/java/"
-            )
-            base_dir = parts[0] if len(parts) > 1 else ""
-            pkg = parts[1] if len(parts) > 1 else ""
-            dest_dir = os.path.join(target_root, base_dir, "src", "test", "java", pkg)
+    # normalize to forward‐slashes for splitting
+    source_norm = source_path.replace("\\", "/")
+    # get the directory portion
+    dir_path = os.path.dirname(source_norm)
+    # split out everything after 'src/test/java/'
+    parts = dir_path.split("src/test/java/")
+    if len(parts) > 1:
+        base_dir, relative_test_pkg = parts
+        dest_dir = os.path.join(
+            target_root, base_dir, "src", "test", "java", relative_test_pkg
+        )
     else:
-        # preserve original source-test location
-        parts = os.path.dirname(source_path.replace("\\", "/")).split("src/test/java/")
-        base_dir = parts[0] if len(parts) > 1 else ""
-        pkg = parts[1] if len(parts) > 1 else ""
-        dest_dir = os.path.join(target_root, base_dir, "src", "test", "java", pkg)
+        # fallback: mirror the source_path directory under the target root
+        dest_dir = os.path.join(target_root, dir_path)
 
     os.makedirs(dest_dir, exist_ok=True)
     full_path = os.path.join(dest_dir, filename)
