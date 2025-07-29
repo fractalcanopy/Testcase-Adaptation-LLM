@@ -208,6 +208,96 @@ def query_llm_for_gradle_fix(
             return
 
 
+def fix_pom_file(pom_path: str) -> bool:
+    """
+    Replace old <source> and <target> tags and common maven.compiler/java.version
+    and java.source/target.version properties to 1.8 so that Maven will compile under Java 8.
+    Return True if file was modified.
+    """
+    import re
+
+    with open(pom_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    new_content = content
+    # legacy compiler plugin tags
+    new_content = new_content.replace(
+        "<source>1.6</source>", "<source>1.8</source>"
+    ).replace("<target>1.6</target>", "<target>1.8</target>")
+
+    # maven.compiler properties
+    new_content = re.sub(
+        r"<maven\.compiler\.source>.*?</maven\.compiler\.source>",
+        "<maven.compiler.source>1.8</maven.compiler.source>",
+        new_content,
+    )
+    new_content = re.sub(
+        r"<maven\.compiler\.target>.*?</maven\.compiler\.target>",
+        "<maven.compiler.target>1.8</maven.compiler.target>",
+        new_content,
+    )
+
+    # java.version property
+    new_content = re.sub(
+        r"<java\.version>.*?</java\.version>",
+        "<java.version>1.8</java.version>",
+        new_content,
+    )
+
+    # java.source.version / java.target.version properties
+    new_content = re.sub(
+        r"<java\.source\.version>.*?</java\.source\.version>",
+        "<java.source.version>1.8</java.source.version>",
+        new_content,
+    )
+    new_content = re.sub(
+        r"<java\.target\.version>.*?</java\.target\.version>",
+        "<java.target.version>1.8</java.target.version>",
+        new_content,
+    )
+
+    if new_content != content:
+        with open(pom_path, "w", encoding="utf-8") as f:
+            f.write(new_content)
+        return True
+
+    return False
+
+
+def check_build(
+    project_path: str, build_system: str = None, command: list = None
+) -> bool:
+    """
+    Attempts to fix the build of a project by invoking the appropriate build system.
+    """
+    return_code, stdout, stderr = invoke_build(project_path, build_system, command)
+    print(f"Build return code: {return_code}")
+    if return_code == 0:
+        print(f"Build succeeded for project at {project_path}")
+        return True
+    else:
+        # Try to fix pom.xml if it's a Maven project
+        if build_system == "maven":
+            pom_path = os.path.join(project_path, "pom.xml")
+            if os.path.exists(pom_path):
+                if fix_pom_file(pom_path):
+                    print(f"Updated {pom_path} to use Java 1.8")
+                    # Retry the build after fixing the pom.xml
+                    return_code, stdout, stderr = invoke_build(
+                        project_path, build_system, command
+                    )
+                    if return_code == 0:
+                        print(f"Build succeeded after fixing {pom_path}")
+                        return True
+                    else:
+                        print(f"Build still failed after fixing {pom_path}")
+                else:
+                    print(f"No changes made to {pom_path}")
+            else:
+                print(f"No pom.xml found at {pom_path}")
+        return False
+
+
 def pre_build_check(
     target_project_path: str,
     build_system: str,
@@ -223,8 +313,14 @@ def pre_build_check(
     gradle_fix_applied = False
 
     if return_code != 0:
+        if check_build(target_project_path, build_system):
+            print(
+                f"Build succeeded for {build_system} project at {target_project_path} after LLM fix."
+            )
+            pom_fix_applied = True if build_system == "maven" else False
+            return 0, pom_fix_applied, gradle_fix_applied
         print(
-            f"Pre-build check FAILED. The target {build_system} project does not compile on its own. Error message: {stdout_str}"
+            f"Pre-build check FAILED. The target {build_system} project does not compile on its own. Error message: {stdout_str[:-100]}"
         )
         if query_llm:
             print(f"Attempting to fix {build_system} build issues using LLM…")
