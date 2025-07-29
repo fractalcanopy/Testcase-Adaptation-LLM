@@ -135,61 +135,6 @@ def write_matching_rows(
     return rows_written
 
 
-def fix_pom_file(pom_path: str) -> bool:
-    """
-    Replace <source>1.6</source> → <source>1.8</source> and
-            <target>1.6</target> → <target>1.8</target>
-    in the given pom.xml. Return True if file was modified.
-    """
-    with open(pom_path, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    new_content = content.replace(
-        "<source>1.6</source>", "<source>1.8</source>"
-    ).replace("<target>1.6</target>", "<target>1.8</target>")
-
-    if new_content != content:
-        with open(pom_path, "w", encoding="utf-8") as f:
-            f.write(new_content)
-        return True
-
-    return False
-
-
-def check_build(
-    project_path: str, build_system: str = None, command: list = None
-) -> bool:
-    """
-    Attempts to fix the build of a project by invoking the appropriate build system.
-    """
-    return_code, stdout, stderr = invoke_build(project_path, build_system, command)
-    print(f"Build return code: {return_code}")
-    if return_code == 0:
-        print(f"Build succeeded for project at {project_path}")
-        return True
-    else:
-        # Try to fix pom.xml if it's a Maven project
-        if build_system == "maven":
-            pom_path = os.path.join(project_path, "pom.xml")
-            if os.path.exists(pom_path):
-                if fix_pom_file(pom_path):
-                    print(f"Updated {pom_path} to use Java 1.8")
-                    # Retry the build after fixing the pom.xml
-                    return_code, stdout, stderr = invoke_build(
-                        project_path, build_system, command
-                    )
-                    if return_code == 0:
-                        print(f"Build succeeded after fixing {pom_path}")
-                        return True
-                    else:
-                        print(f"Build still failed after fixing {pom_path}")
-                else:
-                    print(f"No changes made to {pom_path}")
-            else:
-                print(f"No pom.xml found at {pom_path}")
-        return False
-
-
 if __name__ == "__main__":
     import argparse
 
