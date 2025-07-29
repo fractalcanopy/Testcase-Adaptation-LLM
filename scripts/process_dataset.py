@@ -205,7 +205,7 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
 if __name__ == "__main__":
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     dataset_file = os.path.join(
-        project_root, "data", "testcaseTargetUUTPairMatchingSource11.csv"
+        project_root, "data", "testcaseTargetUUTPairMatchingSource12.csv"
     )
     projects_dir = os.path.join(project_root, "data", "projects")
 
@@ -213,7 +213,7 @@ if __name__ == "__main__":
     os.makedirs(projects_dir, exist_ok=True)
 
     if os.path.exists(dataset_file):
-        process_dataset(dataset_file, projects_dir, num_rows=11)
+        process_dataset(dataset_file, projects_dir, num_rows=12)
     else:
         print(f"Dataset file not found at '{dataset_file}'.")
         print("Please ensure the dataset is available at that location.")
