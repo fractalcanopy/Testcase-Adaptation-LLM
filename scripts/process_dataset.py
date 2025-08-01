@@ -10,6 +10,7 @@ sys.path.insert(0, project_root)
 
 # Import after adding project root to path
 from src.main import main as run_adaptation_workflow  # noqa: E402
+from src.main import pre_build_check  # noqa: E402
 from src.utils import get_code_from_github  # noqa: E402
 from src.metrics_tracker import global_metrics  # noqa: E402
 
@@ -202,10 +203,55 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
         print(f"An error occurred: {e}")
 
 
+def filter_projects_by_prebuild(
+    input_csv: str,
+    output_csv: str,
+    projects_base_dir: str,
+    gemini_api_key: str = "",
+):
+    """
+    Reads the dataset CSV, performs a pre-build check for each target project,
+    and appends rows that compile successfully to a new CSV.
+    """
+    import pandas as pd
+    import os
+
+    df = pd.read_csv(input_csv, sep=";")
+    # Ensure output CSV exists with header
+    if not os.path.exists(output_csv):
+        df.head(0).to_csv(output_csv, sep=";", index=False)
+
+    for _, row in df.iterrows():
+        info = extract_info_from_row(row)
+        if not info:
+            continue
+
+        # ensure repo is present
+        clone_repo(info["target_project"], projects_base_dir)
+        repo_name = info["target_project"].split("/")[-1]
+        local_path = os.path.join(projects_base_dir, repo_name)
+        if not os.path.isdir(local_path):
+            continue
+
+        # detect build system and run pre-build check (no LLM)
+        from src.main import detect_build_system
+
+        build_system = detect_build_system(local_path)
+        return_code, _, _ = pre_build_check(
+            local_path, build_system, gemini_api_key, query_llm=False
+        )
+
+        if return_code == 0:
+            # append the entire original row
+            row.to_frame().T.to_csv(
+                output_csv, sep=";", index=False, header=False, mode="a"
+            )
+
+
 if __name__ == "__main__":
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     dataset_file = os.path.join(
-        project_root, "data", "testcaseTargetUUTPairMatchingSource12.csv"
+        project_root, "data", "testcaseTargetUUTPairMatchingSource20.csv"
     )
     projects_dir = os.path.join(project_root, "data", "projects")
 
@@ -213,7 +259,13 @@ if __name__ == "__main__":
     os.makedirs(projects_dir, exist_ok=True)
 
     if os.path.exists(dataset_file):
-        process_dataset(dataset_file, projects_dir, num_rows=12)
+        # process_dataset(dataset_file, projects_dir, num_rows=20)
+        # now filter by compile success
+        compile_csv = os.path.join(
+            project_root, "data", "testcaseTargetUUTPairMatchingSourceCompile.csv"
+        )
+        filter_projects_by_prebuild(dataset_file, compile_csv, projects_dir)
+
     else:
         print(f"Dataset file not found at '{dataset_file}'.")
         print("Please ensure the dataset is available at that location.")
