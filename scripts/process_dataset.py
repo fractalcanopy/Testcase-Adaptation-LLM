@@ -251,7 +251,7 @@ def filter_projects_by_prebuild(
 if __name__ == "__main__":
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     dataset_file = os.path.join(
-        project_root, "data", "testcaseTargetUUTPairMatchingSource20.csv"
+        project_root, "data", "testcaseTargetUUTPairMatchingSourceCompile.csv"
     )
     projects_dir = os.path.join(project_root, "data", "projects")
 
@@ -259,12 +259,12 @@ if __name__ == "__main__":
     os.makedirs(projects_dir, exist_ok=True)
 
     if os.path.exists(dataset_file):
-        # process_dataset(dataset_file, projects_dir, num_rows=20)
+        process_dataset(dataset_file, projects_dir, num_rows=100)
         # now filter by compile success
         compile_csv = os.path.join(
             project_root, "data", "testcaseTargetUUTPairMatchingSourceCompile.csv"
         )
-        filter_projects_by_prebuild(dataset_file, compile_csv, projects_dir)
+        # filter_projects_by_prebuild(dataset_file, compile_csv, projects_dir)
 
     else:
         print(f"Dataset file not found at '{dataset_file}'.")
