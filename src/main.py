@@ -518,6 +518,7 @@ def main(
     target_project_path: str,
     target_class_relative_path: str,
     max_attempts: int = 3,
+    cleanup_on_failure: bool = True,  # <--- new parameter
     source_project_name: str | None = None,
     target_project_name: str | None = None,
 ):
@@ -526,13 +527,17 @@ def main(
     Supports both Maven and Gradle projects.
 
     Args:
-        original_test_case_code (str): The content of the source Java test case file.
-        source_test_origin_path (str): The original path of the test case (either in a repo or local FS).
-                                       Used to determine package structure.
-        target_project_path (str): Absolute or relative path to the root of the target Java project.
-        target_class_relative_path (str): Relative path of the target class file
-                                           within the target project (e.g., "src/main/java/com/example/Calculator.java").
-        max_attempts (int): Maximum number of LLM adaptation attempts if build keeps failing.
+        original_test_case_code: Source Java test case content.
+        source_test_origin_path: Original path of the test (for package structure).
+        target_project_path: Root of target project.
+        target_class_relative_path: Relative path to target class under test.
+        max_attempts: Max LLM adaptation attempts.
+        cleanup_on_failure: If True (default) restore/remove the inserted test
+            when adaptation fails. If False, keep the (failed) adapted test file
+            and, if a prior test existed, its backup <name>.bak_adaptation so you
+            can inspect differences manually.
+        source_project_name: Optional source project name for metrics.
+        target_project_name: Optional target project name for metrics.
     """
     # Start metrics tracking
     source_project = source_project_name or "unknown"
@@ -612,31 +617,41 @@ def main(
 
     # Cleanup / restore logic after adaptation attempts
     if success:
-        # Remove backup if we created one
         if backup_file and os.path.exists(backup_file):
             try:
                 os.remove(backup_file)
             except OSError:
                 pass
     else:
-        # Adaptation failed
-        if backup_file and os.path.exists(backup_file):
-            # Restore original file
-            try:
-                shutil.move(backup_file, test_file)
-                print(f"Adaptation failed. Restored original test file: {test_file}")
-            except OSError as e:
-                print(f"Failed to restore original test file: {e}")
+        if cleanup_on_failure:
+            if backup_file and os.path.exists(backup_file):
+                try:
+                    shutil.move(backup_file, test_file)
+                    print(
+                        f"Adaptation failed. Restored original test file: {test_file}"
+                    )
+                except OSError as e:
+                    print(f"Failed to restore original test file: {e}")
+            else:
+                try:
+                    os.remove(test_file)
+                    print(f"Adaptation failed. Removed inserted test file: {test_file}")
+                    _prune_empty_parent_dirs(
+                        test_file, stop_markers={"test", "java", "src"}
+                    )
+                except OSError as e:
+                    print(f"Failed to remove inserted test file: {e}")
         else:
-            # No original existed—remove inserted test
-            try:
-                os.remove(test_file)
-                print(f"Adaptation failed. Removed inserted test file: {test_file}")
-                _prune_empty_parent_dirs(
-                    test_file, stop_markers={"test", "java", "src"}
+            # Leave both the adapted (failed) test and any backup for inspection
+            if backup_file and os.path.exists(backup_file):
+                print(
+                    f"Adaptation failed. Cleanup disabled; keeping adapted test at {test_file} "
+                    f"and original backup at {backup_file}"
                 )
-            except OSError as e:
-                print(f"Failed to remove inserted test file: {e}")
+            else:
+                print(
+                    f"Adaptation failed. Cleanup disabled; keeping inserted test at {test_file}"
+                )
 
     print("Workflow finished:", "SUCCESS" if success else "FAILURE")
     global_metrics.finish_tracking()
@@ -644,9 +659,8 @@ def main(
 
 if __name__ == "__main__":
     # --- Configuration ---
-    # Set this flag to False to use the real data from your dataset.
-    # Set it to True to use the local dummy projects.
     USE_DUMMY_PROJECTS = False
+    CLEANUP_ON_FAILURE = True  # Set to False to keep failed adaptation artifacts
 
     project_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -682,6 +696,7 @@ if __name__ == "__main__":
                     source_test_origin_path=source_test_path,
                     target_project_path=target_proj_path,
                     target_class_relative_path=target_cls_rel_path,
+                    cleanup_on_failure=CLEANUP_ON_FAILURE,
                 )
     else:
         # --- Configuration for REAL data from dataset ---
@@ -731,4 +746,5 @@ if __name__ == "__main__":
                 target_class_relative_path=target_uut_file_in_repo,
                 source_project_name=source_repo,
                 target_project_name=target_repo,
+                cleanup_on_failure=CLEANUP_ON_FAILURE,
             )

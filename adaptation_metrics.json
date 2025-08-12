@@ -12,8 +12,8 @@
       "clone_classification": null,
       "initial_error_type": null,
       "final_error_message": null,
-      "execution_time_seconds": 2.5937881469726562,
-      "timestamp": "2025-08-12T20:35:09.844190",
+      "execution_time_seconds": 2.584105968475342,
+      "timestamp": "2025-08-12T21:07:26.472020",
       "gemini_api_used": false,
       "pom_fix_applied": false,
       "build_failed_initially": false,
@@ -31,11 +31,11 @@
     "classification_distribution": {},
     "success_by_attempt": {},
     "error_type_distribution": {},
-    "average_execution_time_seconds": 2.5937881469726562,
-    "max_execution_time_seconds": 2.5937881469726562,
-    "min_execution_time_seconds": 2.5937881469726562,
+    "average_execution_time_seconds": 2.584105968475342,
+    "max_execution_time_seconds": 2.584105968475342,
+    "min_execution_time_seconds": 2.584105968475342,
     "direct_applicable_count": 0,
     "direct_applicable_rate": 0.0
   },
-  "generated_at": "2025-08-12T20:35:12.438151"
+  "generated_at": "2025-08-12T21:07:29.056315"
 }
