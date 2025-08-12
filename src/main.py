@@ -1,5 +1,6 @@
 import os
 import subprocess
+import shutil
 from dotenv import load_dotenv
 
 from .utils import (
@@ -370,9 +371,13 @@ def save_test_file(
     source_path: str,
     target_root: str,
     target_class_relpath: str | None = None,
-) -> str:
-    """Write the test into the target project preserving its source-test directory structure."""
-    import os
+) -> tuple[str, str | None]:
+    """
+    Write the test into the target project preserving its source-test directory structure.
+    Returns (new_test_path, backup_path_or_None).
+    If a file already existed at the destination, it is copied to <filename>.bak_adaptation
+    so it can be restored on failure.
+    """
 
     filename = os.path.basename(source_path)
     # normalize to forward‐slashes for splitting
@@ -392,10 +397,32 @@ def save_test_file(
 
     os.makedirs(dest_dir, exist_ok=True)
     full_path = os.path.join(dest_dir, filename)
+    backup_path: str | None = None
+    if os.path.exists(full_path):
+        backup_path = full_path + ".bak_adaptation"
+        shutil.copy2(full_path, backup_path)
+        print(f"Existing test detected; backed up original to {backup_path}")
     with open(full_path, "w", encoding="utf-8") as f:
         f.write(original_code)
     print(f"Saved test to {full_path}")
-    return full_path
+    return full_path, backup_path
+
+
+def _prune_empty_parent_dirs(start_path: str, stop_markers: set[str]) -> None:
+    """
+    Walk upward removing empty directories until encountering a directory
+    whose basename is in stop_markers or a non-empty directory.
+    """
+    cur = os.path.dirname(start_path)
+    while cur and os.path.basename(cur) not in stop_markers:
+        try:
+            if not os.listdir(cur):
+                os.rmdir(cur)
+                cur = os.path.dirname(cur)
+            else:
+                break
+        except OSError:
+            break
 
 
 def adaptation_loop(
@@ -568,7 +595,7 @@ def main(
         global_metrics.finish_tracking()
         return
 
-    test_file = save_test_file(
+    test_file, backup_file = save_test_file(
         original_test_case_code,
         source_test_origin_path,
         target_project_path,
@@ -582,6 +609,34 @@ def main(
         max_attempts,
         gemini_api_key,
     )
+
+    # Cleanup / restore logic after adaptation attempts
+    if success:
+        # Remove backup if we created one
+        if backup_file and os.path.exists(backup_file):
+            try:
+                os.remove(backup_file)
+            except OSError:
+                pass
+    else:
+        # Adaptation failed
+        if backup_file and os.path.exists(backup_file):
+            # Restore original file
+            try:
+                shutil.move(backup_file, test_file)
+                print(f"Adaptation failed. Restored original test file: {test_file}")
+            except OSError as e:
+                print(f"Failed to restore original test file: {e}")
+        else:
+            # No original existed—remove inserted test
+            try:
+                os.remove(test_file)
+                print(f"Adaptation failed. Removed inserted test file: {test_file}")
+                _prune_empty_parent_dirs(
+                    test_file, stop_markers={"test", "java", "src"}
+                )
+            except OSError as e:
+                print(f"Failed to remove inserted test file: {e}")
 
     print("Workflow finished:", "SUCCESS" if success else "FAILURE")
     global_metrics.finish_tracking()

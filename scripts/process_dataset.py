@@ -250,9 +250,7 @@ def filter_projects_by_prebuild(
 
 if __name__ == "__main__":
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    dataset_file = os.path.join(
-        project_root, "data", "testcaseTargetUUTPairMatchingSourceCompile.csv"
-    )
+    dataset_file = os.path.join(project_root, "data", "test.csv")
     projects_dir = os.path.join(project_root, "data", "projects")
 
     # Ensure the base directory for projects exists
