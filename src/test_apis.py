@@ -34,12 +34,12 @@ def test_perplexity_api(perplexity_api_key):
 
 if __name__ == "__main__":
     load_dotenv()
-    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    gemini_api_key = os.getenv("GEMINI_API_KEY_2")
     if not gemini_api_key:
         raise ValueError("GEMINI_API_KEY environment variable is not set.")
-    # test_gemini_api(gemini_api_key)
+    test_gemini_api(gemini_api_key)
 
     perplexity_api_key = os.getenv("PERPLEXITY_API_KEY")
     if not perplexity_api_key:
         raise ValueError("PERPLEXITY_API_KEY environment variable is not set.")
-    test_perplexity_api(perplexity_api_key)
+    # test_perplexity_api(perplexity_api_key)

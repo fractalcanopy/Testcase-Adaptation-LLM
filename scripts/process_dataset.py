@@ -180,10 +180,10 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
                     source_test_origin_path=info["source_test_path"],
                     target_project_path=target_project_local_path,
                     target_class_relative_path=info["target_uut_path"],
-                    max_attempts=0,
+                    max_attempts=1,
                     source_project_name=info["source_project"],
                     target_project_name=info["target_project"],
-                    cleanup_on_failure=False,
+                    cleanup_on_failure=True,
                 )
                 print(f"--- Finished adaptation for Row {index + 1} ---")
                 # --- End of Integration ---

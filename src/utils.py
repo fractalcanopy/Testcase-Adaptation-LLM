@@ -51,8 +51,39 @@ def parse_maven_error(error_output: str) -> dict:
               Keys might include "error_type", "symbol", "location", "raw_message".
               Returns an empty dictionary if no specific Java compilation error is found.
     """
+
+    return {
+        "error_type": "unknown",
+        "message": error_output,
+        "raw_message": error_output,  # Return first 500 chars if unknown
+    }
     if not error_output:
         return {}
+
+    # First, check if this is a BUILD FAILURE and extract everything after the failure summary
+    build_failure_pattern = (
+        r"BUILD FAILURE.*?"
+        r"Total time:.*?\n"
+        r"Finished at:.*?\n"
+        r"-{10,}\n"
+        r"(.*)"
+    )
+
+    build_failure_match = re.search(build_failure_pattern, error_output, re.DOTALL)
+    if build_failure_match:
+        # Extract all the detailed error information after the build summary
+        detailed_errors = build_failure_match.group(1).strip()
+
+        # If we have detailed errors, use them as the primary error message
+        if (
+            detailed_errors and len(detailed_errors) > 50
+        ):  # Ensure it's substantial content
+            return {
+                "error_type": "build_failure_with_details",
+                "message": "Build failed with compilation errors",
+                "detailed_errors": detailed_errors,
+                "raw_message": detailed_errors,
+            }
 
     # collect all "cannot find symbol" (English + German) errors
     entries = []

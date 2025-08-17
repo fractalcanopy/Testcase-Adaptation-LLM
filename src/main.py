@@ -505,6 +505,7 @@ def query_llm(prompt: str, api_key: str) -> str:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel("gemini-2.5-pro")
         response = model.generate_content(prompt)
+        print(f"Full response: {response}")
         return response.text
     except Exception as e:
         print(f"Error querying LLM API: {str(e)}")
@@ -556,7 +557,7 @@ def main(
 
     # Step 0: Load environment variables (for API keys)
     load_dotenv()
-    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    gemini_api_key = os.getenv("GEMINI_API_KEY_2")
     if not gemini_api_key:
         print(
             "Error: GEMINI_API_KEY not found in .env file. Please set it to use the Gemini API."
