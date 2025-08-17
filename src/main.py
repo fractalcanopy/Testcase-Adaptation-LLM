@@ -221,10 +221,18 @@ def fix_pom_file(pom_path: str) -> bool:
         content = f.read()
 
     new_content = content
+
+    new_content = new_content.replace(
+        "<source>1.5</source>", "<source>1.8</source>"
+    ).replace("<target>1.5</target>", "<target>1.8</target>")
     # legacy compiler plugin tags
     new_content = new_content.replace(
         "<source>1.6</source>", "<source>1.8</source>"
     ).replace("<target>1.6</target>", "<target>1.8</target>")
+
+    new_content = new_content.replace(
+        "<source>1.7</source>", "<source>1.8</source>"
+    ).replace("<target>1.7</target>", "<target>1.8</target>")
 
     # maven.compiler properties
     new_content = re.sub(
@@ -388,9 +396,7 @@ def save_test_file(
     parts = dir_path.split("src/test/java/")
     if len(parts) > 1:
         base_dir, relative_test_pkg = parts
-        dest_dir = os.path.join(
-            target_root, base_dir, "src", "test", "java", relative_test_pkg
-        )
+        dest_dir = os.path.join(target_root, "src", "test", "java", relative_test_pkg)
     else:
         # fallback: mirror the source_path directory under the target root
         dest_dir = os.path.join(target_root, dir_path)

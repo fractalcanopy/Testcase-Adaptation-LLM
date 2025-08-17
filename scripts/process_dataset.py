@@ -24,8 +24,9 @@ def clone_repo(project_name: str, projects_base_dir: str):
         projects_base_dir (str): The base directory to clone projects into.
     """
     try:
-        repo_name = project_name.split("/")[-1]
-        target_clone_path = os.path.join(projects_base_dir, repo_name)
+        # Use full owner/repo for directory name to avoid conflicts
+        safe_project_name = project_name.replace("/", "_")
+        target_clone_path = os.path.join(projects_base_dir, safe_project_name)
         clone_url = f"https://github.com/{project_name}.git"
 
         if os.path.isdir(target_clone_path):
@@ -152,9 +153,9 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
                     continue
 
                 # 2. Determine local path for the cloned target project
-                target_repo_name = info["target_project"].split("/")[-1]
+                safe_target_project_name = info["target_project"].replace("/", "_")
                 target_project_local_path = os.path.join(
-                    projects_base_dir, target_repo_name
+                    projects_base_dir, safe_target_project_name
                 )
 
                 if not os.path.isdir(target_project_local_path):
@@ -180,7 +181,7 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
                     source_test_origin_path=info["source_test_path"],
                     target_project_path=target_project_local_path,
                     target_class_relative_path=info["target_uut_path"],
-                    max_attempts=1,
+                    max_attempts=3,
                     source_project_name=info["source_project"],
                     target_project_name=info["target_project"],
                     cleanup_on_failure=True,
@@ -229,8 +230,8 @@ def filter_projects_by_prebuild(
 
         # ensure repo is present
         clone_repo(info["target_project"], projects_base_dir)
-        repo_name = info["target_project"].split("/")[-1]
-        local_path = os.path.join(projects_base_dir, repo_name)
+        safe_repo_name = info["target_project"].replace("/", "_")
+        local_path = os.path.join(projects_base_dir, safe_repo_name)
         if not os.path.isdir(local_path):
             continue
 
