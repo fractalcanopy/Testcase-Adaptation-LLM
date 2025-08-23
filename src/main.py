@@ -500,6 +500,13 @@ def adaptation_loop(
             f.write(new_test)
         current_code = new_test
 
+    print("Final build attempt after max retries…")
+    code, out, err = invoke_build(target_root, build_system)
+    if code == 0:
+        global_metrics.record_adaptation_attempt(attempt, True)
+        print("Build succeeded")
+        return True
+    global_metrics.record_adaptation_attempt(attempt, False)
     print("Adaptation failed after max attempts")
     return False
 
@@ -509,7 +516,7 @@ def query_llm(prompt: str, api_key: str) -> str:
 
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-2.5-pro")
+        model = genai.GenerativeModel("gemini-2.5-flash")
         response = model.generate_content(prompt)
         print(f"Full response: {response}")
         return response.text
@@ -563,7 +570,7 @@ def main(
 
     # Step 0: Load environment variables (for API keys)
     load_dotenv()
-    gemini_api_key = os.getenv("GEMINI_API_KEY_2")
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
     if not gemini_api_key:
         print(
             "Error: GEMINI_API_KEY not found in .env file. Please set it to use the Gemini API."
