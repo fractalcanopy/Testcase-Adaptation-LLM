@@ -454,7 +454,7 @@ def adaptation_loop(
         # Improved error parsing with better handling
         try:
             parsed = parse_build_error(out or err, build_system)
-            err_msg = parsed.get("message") or parsed.get("raw_message", err or out)
+            err_msg = parsed.get("raw_message")
             print(f"Parsed error: {err_msg}")
 
             # Check if error is related to dataset file not found

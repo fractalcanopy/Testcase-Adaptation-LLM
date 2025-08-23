@@ -51,159 +51,53 @@ def parse_maven_error(error_output: str) -> dict:
               Keys might include "error_type", "symbol", "location", "raw_message".
               Returns an empty dictionary if no specific Java compilation error is found.
     """
-
-    return {
-        "error_type": "unknown",
-        "message": error_output,
-        "raw_message": error_output,  # Return first 500 chars if unknown
-    }
     if not error_output:
-        return {}
+        return {"error_type": "unknown", "message": "No error output provided"}
 
-    # First, check if this is a BUILD FAILURE and extract everything after the failure summary
-    build_failure_pattern = (
-        r"BUILD FAILURE.*?"
-        r"Total time:.*?\n"
-        r"Finished at:.*?\n"
-        r"-{10,}\n"
-        r"(.*)"
-    )
+    # Split into lines and find all [ERROR] lines
+    lines = error_output.strip().split("\n")
 
-    build_failure_match = re.search(build_failure_pattern, error_output, re.DOTALL)
-    if build_failure_match:
-        # Extract all the detailed error information after the build summary
-        detailed_errors = build_failure_match.group(1).strip()
+    # Find the first [ERROR] line that contains actual compilation errors
+    # We want to start from "Failed to execute goal" or similar compilation error messages
+    first_error_index = -1
+    for i, line in enumerate(lines):
+        line_stripped = line.strip()
+        if line_stripped.startswith("[ERROR]") and (
+            "Failed to execute goal" in line_stripped
+            or "COMPILATION ERROR" in line_stripped
+            or "cannot find symbol" in line_stripped
+            or "Compilation failure" in line_stripped
+            or "Inkompatible Typen" in line_stripped
+            or "Symbol nicht gefunden" in line_stripped
+        ):
+            first_error_index = i
+            break
 
-        # If we have detailed errors, use them as the primary error message
-        if (
-            detailed_errors and len(detailed_errors) > 50
-        ):  # Ensure it's substantial content
-            return {
-                "error_type": "build_failure_with_details",
-                "message": "Build failed with compilation errors",
-                "detailed_errors": detailed_errors,
-                "raw_message": detailed_errors,
-            }
+    # If we didn't find a specific compilation error, look for any [ERROR] line
+    if first_error_index == -1:
+        for i, line in enumerate(lines):
+            if line.strip().startswith("[ERROR]"):
+                first_error_index = i
+                break
 
-    # collect all "cannot find symbol" (English + German) errors
-    entries = []
-    # English
-    eng_pattern = (
-        r"\[ERROR\] .*cannot find symbol\s*\n"
-        r"^(?:\[ERROR\])?\s*symbol:\s*(method|variable|class|interface|package)\s*([^\n\r]*)\s*\n"
-        r"^(?:\[ERROR\])?\s*location:\s*([^\n\r]*)"
-    )
-    for m in re.finditer(eng_pattern, error_output, re.MULTILINE | re.IGNORECASE):
-        entries.append(
-            {
-                "error_type": "cannot find symbol",
-                "symbol_type": m.group(1).strip(),
-                "symbol_name": m.group(2).strip(),
-                "location": m.group(3).strip(),
-                "raw_message": m.group(0),
-            }
-        )
-    # German
-    ger_pattern = (
-        r"\[ERROR\] .*Symbol nicht gefunden\s*\n"
-        r"^(?:\[ERROR\])?\s*Symbol:\s*(Methode|Variable|Klasse|Schnittstelle|Paket)\s*([^\n\r]*)\s*\n"
-        r"^(?:\[ERROR\])?\s*Ort:\s*([^\n\r]*)"
-    )
-    type_map = {
-        "methode": "method",
-        "variable": "variable",
-        "klasse": "class",
-        "schnittstelle": "interface",
-        "paket": "package",
-    }
-    for m in re.finditer(ger_pattern, error_output, re.MULTILINE | re.IGNORECASE):
-        t = m.group(1).strip().lower()
-        entries.append(
-            {
-                "error_type": "cannot find symbol",
-                "symbol_type": type_map.get(t, t),
-                "symbol_name": m.group(2).strip(),
-                "location": m.group(3).strip(),
-                "raw_message": m.group(0),
-            }
-        )
-
-    if entries:
-        # if only one, return it directly (preserves existing callers)
-        if len(entries) == 1:
-            return entries[0]
-        # otherwise bundle them all
+    if first_error_index == -1:
+        # No [ERROR] found, return the original message
         return {
-            "error_type": "cannot find symbol",
-            "errors": entries,
+            "error_type": "unknown",
+            "message": error_output,
             "raw_message": error_output,
         }
 
-    # Regex for "method X in class Y cannot be applied to given types"
-    method_not_applicable_match = re.search(
-        r"\[ERROR\] .*method (.*) in (class|interface) (.*) cannot be applied to given types;\s*\n"
-        r"\[ERROR\]\s*required:\s*([^\n\r]*)\s*\n"
-        r"\[ERROR\]\s*found:\s*([^\n\r]*)\s*\n"
-        r"\[ERROR\]\s*reason:\s*([^\n\r]*)",
-        error_output,
-        re.MULTILINE,
-    )
-    if method_not_applicable_match:
-        return {
-            "error_type": "method not applicable",
-            "method_name": method_not_applicable_match.group(1).strip(),
-            "class_type": method_not_applicable_match.group(2).strip(),
-            "class_name": method_not_applicable_match.group(3).strip(),
-            "required_params": method_not_applicable_match.group(4).strip(),
-            "found_params": method_not_applicable_match.group(5).strip(),
-            "reason": method_not_applicable_match.group(6).strip(),
-            "raw_message": method_not_applicable_match.group(0),
-        }
+    # Extract all error lines from the first relevant [ERROR] to the end
+    error_lines = lines[first_error_index:]
+    error_portion = "\n".join(error_lines)
 
-    # General [ERROR] message capture if no specific pattern matched above
-    # This looks for the first significant [ERROR] line that doesn't look like a path
-    general_error_match = re.search(
-        r"\[ERROR\] ([A-Za-z].*)$", error_output, re.MULTILINE
-    )
-    if general_error_match:
-        # Attempt to find a more specific error message if it's a common Maven one
-        mojo_failure_match = re.search(
-            r"\[ERROR\] Failed to execute goal .*:(.*) \((.*)\) on project (.*): (.*) -> \[Help 1\]",
-            error_output,
-            re.MULTILINE,
-        )
-        if mojo_failure_match:
-            return {
-                "error_type": "maven_mojo_failure",
-                "goal": mojo_failure_match.group(1).strip(),
-                "mojo": mojo_failure_match.group(2).strip(),
-                "project": mojo_failure_match.group(3).strip(),
-                "message": mojo_failure_match.group(4).strip(),
-                "raw_message": mojo_failure_match.group(0),
-            }
-        return {
-            "error_type": "general_error",
-            "message": general_error_match.group(1).strip(),
-            "raw_message": general_error_match.group(0),
-        }
-
-    # Fallback for non-compilation errors from java_env_manager itself
-    if (
-        "Error: Project directory" in error_output
-        or "Error: Maven command" in error_output
-        or "An unexpected error occurred" in error_output
-    ):
-        return {
-            "error_type": "environment_error",
-            "message": error_output.strip(),
-            "raw_message": error_output.strip(),
-        }
-
+    # If no specific pattern matches, return the error portion
     return {
-        "error_type": "unknown",
-        "message": "Could not parse a specific error message.",
-        "raw_message": error_output[:500],
-    }  # Return first 500 chars if unknown
+        "error_type": "compilation_error",
+        "message": "Maven build failed",
+        "raw_message": error_portion,
+    }
 
 
 def parse_gradle_error(error_output: str) -> dict:

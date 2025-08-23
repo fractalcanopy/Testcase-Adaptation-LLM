@@ -1,0 +1,65 @@
+{
+  "results": [
+    {
+      "source_project": "jjrodrig/LightCouch",
+      "source_test_path": "src/test/java/org/lightcouch/tests/ViewsTest.java",
+      "target_project": "henryabra/LightCouch",
+      "target_uut_path": "src/main/java/org/lightcouch/View.java",
+      "pre_build_success": true,
+      "final_build_success": true,
+      "total_attempts": 3,
+      "successful_attempt": 3,
+      "clone_classification": "Type-4",
+      "initial_error_type": null,
+      "final_error_message": null,
+      "execution_time_seconds": 162.87068390846252,
+      "timestamp": "2025-08-17T14:38:23.030496",
+      "gemini_api_used": true,
+      "pom_fix_applied": false,
+      "build_failed_initially": true,
+      "llm_response_length": 9040
+    },
+    {
+      "source_project": "prezi/Hive-JSON-Serde",
+      "source_test_path": "json-serde/src/test/java/org/openx/data/jsonserde/JsonSerDeTest.java",
+      "target_project": "hudl/Hive-JSON-Serde",
+      "target_uut_path": "json/src/main/java/org/openx/data/jsonserde/json/JSONObject.java",
+      "pre_build_success": true,
+      "final_build_success": true,
+      "total_attempts": 1,
+      "successful_attempt": 1,
+      "clone_classification": null,
+      "initial_error_type": null,
+      "final_error_message": null,
+      "execution_time_seconds": 6.425668239593506,
+      "timestamp": "2025-08-17T14:41:06.523719",
+      "gemini_api_used": false,
+      "pom_fix_applied": false,
+      "build_failed_initially": false,
+      "llm_response_length": null
+    }
+  ],
+  "summary": {
+    "total_adaptations": 2,
+    "successful_adaptations": 2,
+    "success_rate": 1.0,
+    "pre_build_failures": 0,
+    "pom_fixes_applied": 0,
+    "initial_build_failures": 1,
+    "llm_usage_count": 1,
+    "classification_distribution": {
+      "Type-4": 1
+    },
+    "success_by_attempt": {
+      "3": 1,
+      "1": 1
+    },
+    "error_type_distribution": {},
+    "average_execution_time_seconds": 84.64817607402802,
+    "max_execution_time_seconds": 162.87068390846252,
+    "min_execution_time_seconds": 6.425668239593506,
+    "direct_applicable_count": 1,
+    "direct_applicable_rate": 0.5
+  },
+  "generated_at": "2025-08-17T14:41:12.949800"
+}

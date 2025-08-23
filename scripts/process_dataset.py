@@ -181,7 +181,7 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
                     source_test_origin_path=info["source_test_path"],
                     target_project_path=target_project_local_path,
                     target_class_relative_path=info["target_uut_path"],
-                    max_attempts=3,
+                    max_attempts=4,
                     source_project_name=info["source_project"],
                     target_project_name=info["target_project"],
                     cleanup_on_failure=True,
@@ -252,7 +252,9 @@ def filter_projects_by_prebuild(
 
 if __name__ == "__main__":
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    dataset_file = os.path.join(project_root, "data", "test.csv")
+    dataset_file = os.path.join(
+        project_root, "data", "testcaseTargetUUTPairMatchingSourceCompile3.csv"
+    )
     projects_dir = os.path.join(project_root, "data", "projects")
 
     # Ensure the base directory for projects exists
@@ -262,7 +264,7 @@ if __name__ == "__main__":
         process_dataset(dataset_file, projects_dir, num_rows=100)
         # now filter by compile success
         compile_csv = os.path.join(
-            project_root, "data", "testcaseTargetUUTPairMatchingSourceCompile.csv"
+            project_root, "data", "testcaseTargetUUTPairMatchingSourceCompile3.csv"
         )
         # filter_projects_by_prebuild(dataset_file, compile_csv, projects_dir)
 
