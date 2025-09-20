@@ -154,16 +154,41 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
 
                 # 2. Determine local path for the cloned target project
                 safe_target_project_name = info["target_project"].replace("/", "_")
-                target_project_local_path = os.path.join(
+                target_repo_root = os.path.join(
                     projects_base_dir, safe_target_project_name
                 )
 
-                if not os.path.isdir(target_project_local_path):
+                if not os.path.isdir(target_repo_root):
                     print(
-                        f"Error: Target project directory not found at '{target_project_local_path}' after clone attempt. Skipping row."
+                        f"Error: Target project directory not found at '{target_repo_root}' after clone attempt. Skipping row."
                     )
                     print("-" * 20)
                     continue
+
+                # Derive module root by cutting off at the last 'src'
+                # info["target_uut_path"] is something like "core/src/main/java/…"
+                parts = info["target_uut_path"].split("/src/", 1)
+                module_subpath = parts[0]  # e.g. "core"
+                module_root = os.path.join(target_repo_root, module_subpath)
+
+                if os.path.isdir(module_root):
+                    target_project_path = module_root
+                    print(f"Using module root for build: {target_project_path}")
+                else:
+                    target_project_path = target_repo_root
+                    print(
+                        f"No nested module found, using repo root: {target_project_path}"
+                    )
+
+                # **new**: strip off the module_subpath so the class path is relative
+                if len(parts) == 2:
+                    # parts[1] is "main/java/…", re-prepend the "src/" segment
+                    class_relpath = os.path.join("src", parts[1]).replace("\\", "/")
+                else:
+                    # fallback to the full path
+                    class_relpath = info["target_uut_path"]
+
+                print(f"Resolved class_relpath under module: {class_relpath}")
 
                 # 3. Update the global metrics tracker with source project info
                 if (
@@ -179,16 +204,14 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
                 run_adaptation_workflow(
                     original_test_case_code=source_test_code,
                     source_test_origin_path=info["source_test_path"],
-                    target_project_path=target_project_local_path,
-                    target_class_relative_path=info["target_uut_path"],
+                    target_project_path=target_project_path,
+                    target_class_relative_path=class_relpath,
                     max_attempts=3,
                     source_project_name=info["source_project"],
                     target_project_name=info["target_project"],
                     cleanup_on_failure=True,
                 )
                 print(f"--- Finished adaptation for Row {index + 1} ---")
-                # --- End of Integration ---
-
                 print("-" * 20)
 
         # After processing all rows, save metrics and print summary
@@ -199,8 +222,6 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
         global_metrics.save_results()
         global_metrics.print_summary()
 
-    except FileNotFoundError:
-        print(f"Error: Dataset file not found at '{file_path}'")
     except Exception as e:
         print(f"An error occurred: {e}")
 

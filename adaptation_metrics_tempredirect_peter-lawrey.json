@@ -1,0 +1,43 @@
+{
+  "results": [
+    {
+      "source_project": "tempredirect/Java-Chronicle",
+      "source_test_path": "src/test/java/vanilla/java/chronicle/impl/ByteBufferExcerptTest.java",
+      "target_project": "peter-lawrey/Java-Chronicle",
+      "target_uut_path": "src/main/java/com/higherfrequencytrading/chronicle/impl/AbstractExcerpt.java",
+      "pre_build_success": true,
+      "final_build_success": false,
+      "total_attempts": 3,
+      "successful_attempt": null,
+      "clone_classification": "Type-4",
+      "initial_error_type": null,
+      "final_error_message": null,
+      "execution_time_seconds": 220.00578999519348,
+      "timestamp": "2025-09-20T17:44:40.990299",
+      "gemini_api_used": true,
+      "pom_fix_applied": false,
+      "build_failed_initially": true,
+      "llm_response_length": 17281
+    }
+  ],
+  "summary": {
+    "total_adaptations": 1,
+    "successful_adaptations": 0,
+    "success_rate": 0.0,
+    "pre_build_failures": 0,
+    "pom_fixes_applied": 0,
+    "initial_build_failures": 1,
+    "llm_usage_count": 1,
+    "classification_distribution": {
+      "Type-4": 1
+    },
+    "success_by_attempt": {},
+    "error_type_distribution": {},
+    "average_execution_time_seconds": 220.00578999519348,
+    "max_execution_time_seconds": 220.00578999519348,
+    "min_execution_time_seconds": 220.00578999519348,
+    "direct_applicable_count": 0,
+    "direct_applicable_rate": 0.0
+  },
+  "generated_at": "2025-09-20T17:48:20.996330"
+}

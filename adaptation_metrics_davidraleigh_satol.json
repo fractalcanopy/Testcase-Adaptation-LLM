@@ -1,0 +1,45 @@
+{
+  "results": [
+    {
+      "source_project": "davidraleigh/geometry-api-java",
+      "source_test_path": "src/test/java/com/esri/core/geometry/TestWKBSupport.java",
+      "target_project": "satol/geometry-api-java",
+      "target_uut_path": "src/main/java/com/esri/core/geometry/ogc/OGCGeometry.java",
+      "pre_build_success": true,
+      "final_build_success": true,
+      "total_attempts": 3,
+      "successful_attempt": 3,
+      "clone_classification": "Type-3",
+      "initial_error_type": null,
+      "final_error_message": null,
+      "execution_time_seconds": 92.10682678222656,
+      "timestamp": "2025-09-20T16:38:54.447474",
+      "gemini_api_used": true,
+      "pom_fix_applied": false,
+      "build_failed_initially": true,
+      "llm_response_length": 8526
+    }
+  ],
+  "summary": {
+    "total_adaptations": 1,
+    "successful_adaptations": 1,
+    "success_rate": 1.0,
+    "pre_build_failures": 0,
+    "pom_fixes_applied": 0,
+    "initial_build_failures": 1,
+    "llm_usage_count": 1,
+    "classification_distribution": {
+      "Type-3": 1
+    },
+    "success_by_attempt": {
+      "3": 1
+    },
+    "error_type_distribution": {},
+    "average_execution_time_seconds": 92.10682678222656,
+    "max_execution_time_seconds": 92.10682678222656,
+    "min_execution_time_seconds": 92.10682678222656,
+    "direct_applicable_count": 0,
+    "direct_applicable_rate": 0.0
+  },
+  "generated_at": "2025-09-20T16:40:26.554556"
+}

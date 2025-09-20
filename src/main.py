@@ -457,15 +457,6 @@ def adaptation_loop(
             err_msg = parsed.get("raw_message")
             print(f"Parsed error: {err_msg}")
 
-            # Check if error is related to dataset file not found
-            if "Dataset file not found" in err_msg:
-                print(
-                    "Build error is related to missing dataset file. This suggests the test is attempting to access the dataset directly."
-                )
-                print(
-                    "Consider modifying the test to use mock data instead of accessing the dataset file directly."
-                )
-                break
         except Exception as e:
             print(f"Error parsing build error: {str(e)}")
             err_msg = err or out

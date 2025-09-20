@@ -1,0 +1,43 @@
+{
+  "results": [
+    {
+      "source_project": "stefanlenselink/crawljax",
+      "source_test_path": "core/src/test/java/com/crawljax/util/HelperTest.java",
+      "target_project": "daisy1754/crawljax",
+      "target_uut_path": "src/main/java/com/crawljax/util/DomUtils.java",
+      "pre_build_success": true,
+      "final_build_success": true,
+      "total_attempts": 3,
+      "successful_attempt": 3,
+      "clone_classification": null,
+      "initial_error_type": null,
+      "final_error_message": null,
+      "execution_time_seconds": 108.23458886146545,
+      "timestamp": "2025-09-19T13:19:12.238948",
+      "gemini_api_used": true,
+      "pom_fix_applied": false,
+      "build_failed_initially": true,
+      "llm_response_length": 4978
+    }
+  ],
+  "summary": {
+    "total_adaptations": 1,
+    "successful_adaptations": 1,
+    "success_rate": 1.0,
+    "pre_build_failures": 0,
+    "pom_fixes_applied": 0,
+    "initial_build_failures": 1,
+    "llm_usage_count": 1,
+    "classification_distribution": {},
+    "success_by_attempt": {
+      "3": 1
+    },
+    "error_type_distribution": {},
+    "average_execution_time_seconds": 108.23458886146545,
+    "max_execution_time_seconds": 108.23458886146545,
+    "min_execution_time_seconds": 108.23458886146545,
+    "direct_applicable_count": 0,
+    "direct_applicable_rate": 0.0
+  },
+  "generated_at": "2025-09-19T13:21:00.473742"
+}
