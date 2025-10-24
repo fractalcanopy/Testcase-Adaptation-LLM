@@ -431,6 +431,95 @@ def _prune_empty_parent_dirs(start_path: str, stop_markers: set[str]) -> None:
             break
 
 
+def save_uut_backup(uut_file_path: str) -> str | None:
+    """
+    Create a backup of the existing UUT file.
+    Returns the backup path if successful, None otherwise.
+    """
+    if not os.path.exists(uut_file_path):
+        print(f"UUT file does not exist: {uut_file_path}")
+        return None
+
+    backup_path = uut_file_path + ".bak_adaptation_uut"
+    try:
+        shutil.copy2(uut_file_path, backup_path)
+        print(f"Created UUT backup at: {backup_path}")
+        return backup_path
+    except Exception as e:
+        print(f"Failed to create UUT backup: {e}")
+        return None
+
+
+def uut_adaptation_loop(
+    uut_file: str,
+    target_root: str,
+    test_file: str,
+    build_system: str,
+    max_attempts: int,
+    api_key: str,
+):
+    """UUT adaptation: build, parse failures, prompt LLM to modify UUT, repeat."""
+    current_uut_code = open(uut_file, "r", encoding="utf-8").read()
+    current_test_code = open(test_file, "r", encoding="utf-8").read()
+
+    for attempt in range(1, max_attempts + 1):
+        print(f"\nUUT Adaptation Attempt {attempt}/{max_attempts}: building…")
+        code, out, err = invoke_build(target_root, build_system)
+        if code == 0:
+            global_metrics.record_uut_adaptation_attempt(attempt, True)
+            print("Build succeeded after UUT modification")
+            return True
+
+        global_metrics.record_uut_adaptation_attempt(attempt, False)
+
+        # Parse error for UUT modification
+        try:
+            parsed = parse_build_error(out or err, build_system)
+            err_msg = parsed.get("raw_message")
+            print(f"Parsed UUT error: {err_msg}")
+        except Exception as e:
+            print(f"Error parsing build error for UUT: {str(e)}")
+            err_msg = err or out
+            print(f"Using raw error message: {err_msg}")
+
+        # Build prompt for UUT modification
+        from .llm_analyzer import construct_uut_modification_prompt
+
+        prompt = construct_uut_modification_prompt(
+            current_uut_code=current_uut_code,
+            test_code=current_test_code,
+            parsed_build_error=err_msg,
+            uut_class_name=os.path.basename(uut_file),
+        )
+
+        suggestion = query_llm(prompt, api_key)
+        global_metrics.record_llm_usage(suggestion)
+        print("\n--- LLM UUT Modification Suggestion ---")
+        print("--------------------------------------------------")
+        print(suggestion)
+        print("--------------------------------------------------")
+
+        new_uut_code = extract_java_code_from_llm_response(suggestion)
+        if not new_uut_code:
+            print("No UUT code extracted; aborting UUT adaptation.")
+            break
+
+        # Write modified UUT and retry
+        with open(uut_file, "w", encoding="utf-8") as f:
+            f.write(new_uut_code)
+        current_uut_code = new_uut_code
+
+    print("Final build attempt after max UUT retries…")
+    code, out, err = invoke_build(target_root, build_system)
+    if code == 0:
+        global_metrics.record_uut_adaptation_attempt(max_attempts, True)
+        print("Build succeeded")
+        return True
+    global_metrics.record_uut_adaptation_attempt(max_attempts, False)
+    print("UUT adaptation failed after max attempts")
+    return False
+
+
 def adaptation_loop(
     test_file: str,
     target_root: str,
@@ -523,9 +612,10 @@ def main(
     target_project_path: str,
     target_class_relative_path: str,
     max_attempts: int = 3,
-    cleanup_on_failure: bool = True,  # <--- new parameter
+    cleanup_on_failure: bool = True,
     source_project_name: str | None = None,
     target_project_name: str | None = None,
+    enable_uut_modification: bool = False,  # <--- NEW PARAMETER
 ):
     """
     Main orchestrator for the test case adaptation workflow.
@@ -543,6 +633,7 @@ def main(
             can inspect differences manually.
         source_project_name: Optional source project name for metrics.
         target_project_name: Optional target project name for metrics.
+        enable_uut_modification: If True, also attempt to modify the UUT if test adaptation fails.
     """
     # Start metrics tracking
     source_project = source_project_name or "unknown"
@@ -554,12 +645,13 @@ def main(
         target_class_relative_path,
     )
 
-    print(f"--- Starting Test Adaptation Workflow ---")  # noqa: F541
+    print(f"--- Starting Test Adaptation Workflow ---")
     print(f"Source Test Origin: {source_test_origin_path}")
     print(f"Target Project Path: {target_project_path}")
     print(f"Target Class Relative Path: {target_class_relative_path}")
+    print(f"UUT Modification Enabled: {enable_uut_modification}")
 
-    # Step 0: Load environment variables (for API keys)
+    # ...existing code for environment setup, pre-build check...
     load_dotenv()
     gemini_api_key = os.getenv("GEMINI_API_KEY")
     if not gemini_api_key:
@@ -572,12 +664,10 @@ def main(
         global_metrics.finish_tracking()
         return
 
-    # --- Pre-Build Check ---
+    # Pre-Build Check (unchanged)
     print(
         f"\n--- Pre-Build Check: Verifying target project '{target_project_path}' builds correctly ---"
     )
-
-    # Detect build system
     build_system = detect_build_system(target_project_path)
     print(f"Detected build system: {build_system}")
 
@@ -593,7 +683,6 @@ def main(
         target_project_path, build_system, gemini_api_key
     )
 
-    # Record pre-build result
     global_metrics.record_pre_build_result(
         return_code == 0, pom_fix_applied or gradle_fix_applied
     )
@@ -605,13 +694,17 @@ def main(
         global_metrics.finish_tracking()
         return
 
-    test_file, backup_file = save_test_file(
+    # Save test file (unchanged)
+    test_file, test_backup_file = save_test_file(
         original_test_case_code,
         source_test_origin_path,
         target_project_path,
         target_class_relative_path,
     )
-    success = adaptation_loop(
+
+    # Try test adaptation first (existing logic)
+    print("\n--- Phase 1: Test Adaptation ---")
+    test_success = adaptation_loop(
         test_file,
         target_project_path,
         target_class_relative_path,
@@ -620,18 +713,61 @@ def main(
         gemini_api_key,
     )
 
-    # Cleanup / restore logic after adaptation attempts
-    if success:
-        if backup_file and os.path.exists(backup_file):
+    uut_backup_file = None
+    uut_success = False
+
+    # If test adaptation failed and UUT modification is enabled, try UUT modification
+    if not test_success and enable_uut_modification:
+        print("\n--- Phase 2: UUT Modification (Test adaptation failed) ---")
+
+        # Get the UUT file path
+        uut_file = os.path.join(target_project_path, target_class_relative_path)
+
+        if not os.path.exists(uut_file):
+            print(f"UUT file not found: {uut_file}")
+            print("Cannot proceed with UUT modification.")
+        else:
+            # Create backup of existing UUT
+            uut_backup_file = save_uut_backup(uut_file)
+            if uut_backup_file:
+                # Try UUT adaptation
+                uut_success = uut_adaptation_loop(
+                    uut_file,
+                    target_project_path,
+                    test_file,
+                    build_system,
+                    max_attempts,
+                    gemini_api_key,
+                )
+            else:
+                print(
+                    "Failed to create UUT backup. Skipping UUT modification for safety."
+                )
+
+    # Overall success is either test adaptation OR UUT modification success
+    overall_success = test_success or uut_success
+
+    # Enhanced cleanup logic for both test and UUT files
+    if overall_success:
+        # Remove backup files on success
+        if test_backup_file and os.path.exists(test_backup_file):
             try:
-                os.remove(backup_file)
+                os.remove(test_backup_file)
+                print(f"Removed test backup: {test_backup_file}")
+            except OSError:
+                pass
+        if uut_backup_file and os.path.exists(uut_backup_file):
+            try:
+                os.remove(uut_backup_file)
+                print(f"Removed UUT backup: {uut_backup_file}")
             except OSError:
                 pass
     else:
         if cleanup_on_failure:
-            if backup_file and os.path.exists(backup_file):
+            # Restore test file
+            if test_backup_file and os.path.exists(test_backup_file):
                 try:
-                    shutil.move(backup_file, test_file)
+                    shutil.move(test_backup_file, test_file)
                     print(
                         f"Adaptation failed. Restored original test file: {test_file}"
                     )
@@ -646,19 +782,33 @@ def main(
                     )
                 except OSError as e:
                     print(f"Failed to remove inserted test file: {e}")
-        else:
-            # Leave both the adapted (failed) test and any backup for inspection
-            if backup_file and os.path.exists(backup_file):
-                print(
-                    f"Adaptation failed. Cleanup disabled; keeping adapted test at {test_file} "
-                    f"and original backup at {backup_file}"
-                )
-            else:
-                print(
-                    f"Adaptation failed. Cleanup disabled; keeping inserted test at {test_file}"
-                )
 
-    print("Workflow finished:", "SUCCESS" if success else "FAILURE")
+            # Restore UUT file if it was modified
+            if uut_backup_file and os.path.exists(uut_backup_file):
+                try:
+                    uut_file = os.path.join(
+                        target_project_path, target_class_relative_path
+                    )
+                    shutil.move(uut_backup_file, uut_file)
+                    print(f"Adaptation failed. Restored original UUT file: {uut_file}")
+                except OSError as e:
+                    print(f"Failed to restore original UUT file: {e}")
+        else:
+            # Keep failed files for inspection
+            print(f"Adaptation failed. Cleanup disabled; keeping files for inspection.")
+            if test_backup_file and os.path.exists(test_backup_file):
+                print(f"  Original test backup: {test_backup_file}")
+            if uut_backup_file and os.path.exists(uut_backup_file):
+                print(f"  Original UUT backup: {uut_backup_file}")
+
+    result_msg = "SUCCESS" if overall_success else "FAILURE"
+    if overall_success:
+        if test_success:
+            result_msg += " (Test Adaptation)"
+        else:
+            result_msg += " (UUT Modification)"
+
+    print("Workflow finished:", result_msg)
     global_metrics.finish_tracking()
 
 

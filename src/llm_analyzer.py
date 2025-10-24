@@ -36,6 +36,57 @@ Only provide the corrected build.gradle content, no additional explanation.
     return prompt
 
 
+def construct_uut_modification_prompt(
+    current_uut_code: str,
+    test_code: str,
+    parsed_build_error: str,
+    uut_class_name: str,
+) -> str:
+    """
+    Constructs a prompt for the LLM to modify the Unit Under Test (UUT) class
+    to make it compatible with the adapted test case.
+    """
+    prompt = f"""You are a Java expert tasked with modifying a Unit Under Test (UUT) class to make it compatible with a test case that is failing to compile.
+
+**Current UUT Class ({uut_class_name}):**
+```java
+{current_uut_code}
+```
+
+**Test Case Code:**
+```java
+{test_code}
+```
+
+**Build Error:**
+```
+{parsed_build_error}
+```
+
+**Task:**
+Analyze the build error and modify the UUT class to resolve the compilation issues. The test case should not be changed - only modify the UUT class to make it compatible.
+
+Common modifications you might need to make:
+1. Add missing methods that the test is trying to call
+2. Change method signatures to match what the test expects
+3. Add missing fields or constants
+4. Adjust access modifiers (public, private, protected)
+5. Add missing imports or dependencies
+6. Modify return types to match test expectations
+
+**Instructions:**
+- Only modify the UUT class, not the test
+- Preserve existing functionality where possible
+- Add minimal changes to resolve the compilation error
+- Ensure the modified class maintains good Java practices
+- Provide only the complete modified UUT class code in a code block
+
+Response should be in the format (very important):
+```java
+"""
+    return prompt
+
+
 def construct_llm_prompt(
     original_test_case_code: str,
     parsed_build_error: str,

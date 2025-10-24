@@ -43,7 +43,9 @@ class AdaptationResult:
 class MetricsTracker:
     """Tracks and analyzes performance metrics for the test adaptation tool."""
 
-    def __init__(self, output_file: str = "adaptation_metrics.json"):
+    def __init__(
+        self, output_file: str = f"adaptation_metrics_{datetime.now().isoformat()}.json"
+    ):
         self.results: List[AdaptationResult] = []
         self.output_file = output_file
         self.current_result: Optional[AdaptationResult] = None
@@ -107,6 +109,19 @@ class MetricsTracker:
 
             if not success and attempt_number == self.current_result.total_attempts:
                 self.current_result.final_error_message = error_message
+
+    def record_uut_adaptation_attempt(self, attempt_number: int, success: bool):
+        """Records a UUT adaptation attempt."""
+        if self.current_result:
+            if not hasattr(self.current_result, "uut_adaptation_attempts"):
+                self.current_result.uut_adaptation_attempts = []
+            self.current_result.uut_adaptation_attempts.append(
+                {
+                    "attempt": attempt_number,
+                    "success": success,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
 
     def record_initial_error(self, error_type: str) -> None:
         """Record the type of initial error encountered."""
@@ -182,6 +197,12 @@ class MetricsTracker:
         )
         llm_usage_count = sum(1 for r in self.results if r.gemini_api_used)
 
+        uut_adaptations = sum(
+            1
+            for r in self.results
+            if hasattr(r, "uut_adaptation_attempts") and r.uut_adaptation_attempts
+        )
+
         # Classification distribution
         classifications = {}
         for result in self.results:
@@ -234,6 +255,7 @@ class MetricsTracker:
             "pom_fixes_applied": pom_fixes_applied,
             "initial_build_failures": initial_build_failures,
             "llm_usage_count": llm_usage_count,
+            "uut_adaptations": uut_adaptations,
             "classification_distribution": classifications,
             "success_by_attempt": attempt_counts,
             "error_type_distribution": error_types,

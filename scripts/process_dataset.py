@@ -116,7 +116,12 @@ def extract_info_from_row(row: pd.Series) -> dict | None:
         return None
 
 
-def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
+def process_dataset(
+    file_path: str,
+    projects_base_dir: str,
+    num_rows: int = 5,
+    enable_uut_modification: bool = False,
+):
     """
     Reads the dataset CSV and processes each row to extract and format information.
     """
@@ -210,6 +215,7 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
                     source_project_name=info["source_project"],
                     target_project_name=info["target_project"],
                     cleanup_on_failure=True,
+                    enable_uut_modification=enable_uut_modification,  # <--- NEW
                 )
                 print(f"--- Finished adaptation for Row {index + 1} ---")
                 print("-" * 20)
@@ -273,14 +279,17 @@ def filter_projects_by_prebuild(
 
 if __name__ == "__main__":
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    dataset_file = os.path.join(project_root, "data", "A_WMTC.csv")
+    dataset_file = os.path.join(project_root, "data", "A_WMUUT.csv")
     projects_dir = os.path.join(project_root, "data", "projects")
 
     # Ensure the base directory for projects exists
     os.makedirs(projects_dir, exist_ok=True)
 
     if os.path.exists(dataset_file):
-        process_dataset(dataset_file, projects_dir, num_rows=100)
+        for i in range(6):
+            process_dataset(
+                dataset_file, projects_dir, num_rows=100, enable_uut_modification=True
+            )  # Set to True to enable
         # now filter by compile success
         compile_csv = os.path.join(
             project_root, "data", "testcaseTargetUUTPairMatchingSourceCompile3.csv"
