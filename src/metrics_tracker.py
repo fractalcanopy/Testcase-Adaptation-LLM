@@ -43,7 +43,9 @@ class AdaptationResult:
 class MetricsTracker:
     """Tracks and analyzes performance metrics for the test adaptation tool."""
 
-    def __init__(self, output_file: str = "adaptation_metrics.json"):
+    def __init__(
+        self, output_file: str = f"adaptation_metrics_{datetime.now().isoformat()}.json"
+    ):
         self.results: List[AdaptationResult] = []
         self.output_file = output_file
         self.current_result: Optional[AdaptationResult] = None
@@ -107,6 +109,19 @@ class MetricsTracker:
 
             if not success and attempt_number == self.current_result.total_attempts:
                 self.current_result.final_error_message = error_message
+
+    def record_uut_adaptation_attempt(self, attempt_number: int, success: bool):
+        """Records a UUT adaptation attempt."""
+        if self.current_result:
+            if not hasattr(self.current_result, "uut_adaptation_attempts"):
+                self.current_result.uut_adaptation_attempts = []
+            self.current_result.uut_adaptation_attempts.append(
+                {
+                    "attempt": attempt_number,
+                    "success": success,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
 
     def record_initial_error(self, error_type: str) -> None:
         """Record the type of initial error encountered."""
@@ -182,6 +197,12 @@ class MetricsTracker:
         )
         llm_usage_count = sum(1 for r in self.results if r.gemini_api_used)
 
+        uut_adaptations = sum(
+            1
+            for r in self.results
+            if hasattr(r, "uut_adaptation_attempts") and r.uut_adaptation_attempts
+        )
+
         # Classification distribution
         classifications = {}
         for result in self.results:
@@ -214,6 +235,16 @@ class MetricsTracker:
             sum(execution_times) / len(execution_times) if execution_times else 0
         )
 
+        # NEW: Direct applicability: tests that passed on first attempt without LLM
+        direct_applicable = sum(
+            1
+            for r in self.results
+            if r.successful_attempt == 1 and not r.gemini_api_used
+        )
+        direct_applicability_rate = (
+            direct_applicable / total_adaptations if total_adaptations > 0 else 0
+        )
+
         return {
             "total_adaptations": total_adaptations,
             "successful_adaptations": successful_adaptations,
@@ -224,6 +255,7 @@ class MetricsTracker:
             "pom_fixes_applied": pom_fixes_applied,
             "initial_build_failures": initial_build_failures,
             "llm_usage_count": llm_usage_count,
+            "uut_adaptations": uut_adaptations,
             "classification_distribution": classifications,
             "success_by_attempt": attempt_counts,
             "error_type_distribution": error_types,
@@ -234,6 +266,9 @@ class MetricsTracker:
             "min_execution_time_seconds": min(execution_times)
             if execution_times
             else 0,
+            # NEW
+            "direct_applicable_count": direct_applicable,
+            "direct_applicable_rate": direct_applicability_rate,
         }
 
     def print_summary(self) -> None:
@@ -255,23 +290,29 @@ class MetricsTracker:
         print(f"Initial build failures: {stats['initial_build_failures']}")
         print(f"POM fixes applied: {stats['pom_fixes_applied']}")
         print(f"LLM usage count: {stats['llm_usage_count']}")
+        # NEW
+        print(
+            f"Directly applicable (no LLM needed): "
+            f"{stats['direct_applicable_count']} "
+            f"({stats['direct_applicable_rate']:.2%})"
+        )
 
         if stats["classification_distribution"]:
-            print(f"\nClone classification distribution:")  # noqa: F541
+            print(f"\nClone classification distribution:")
             for class_type, count in stats["classification_distribution"].items():
                 print(f"  {class_type}: {count}")
 
         if stats["success_by_attempt"]:
-            print(f"\nSuccess by attempt number:")  # noqa: F541
+            print(f"\nSuccess by attempt number:")
             for attempt, count in sorted(stats["success_by_attempt"].items()):
                 print(f"  Attempt {attempt}: {count}")
 
         if stats["error_type_distribution"]:
-            print(f"\nError type distribution:")  # noqa: F541
+            print(f"\nError type distribution:")
             for error_type, count in stats["error_type_distribution"].items():
                 print(f"  {error_type}: {count}")
 
-        print(f"\nTiming:")  # noqa: F541
+        print(f"\nTiming:")
         print(
             f"  Average execution time: {stats['average_execution_time_seconds']:.2f}s"
         )

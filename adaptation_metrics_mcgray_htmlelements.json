@@ -1,0 +1,45 @@
+{
+  "results": [
+    {
+      "source_project": "mcgray/htmlelements",
+      "source_test_path": "htmlelements-java/src/test/java/ru/yandex/qatools/htmlelements/PageInitializationTest.java",
+      "target_project": "lanwen/htmlelements",
+      "target_uut_path": "src/test/java/ru/yandex/qatools/htmlelements/PageInitializationTest.java",
+      "pre_build_success": true,
+      "final_build_success": true,
+      "total_attempts": 3,
+      "successful_attempt": 3,
+      "clone_classification": "Type-3",
+      "initial_error_type": null,
+      "final_error_message": null,
+      "execution_time_seconds": 110.2864031791687,
+      "timestamp": "2025-09-20T18:01:25.686158",
+      "gemini_api_used": true,
+      "pom_fix_applied": false,
+      "build_failed_initially": true,
+      "llm_response_length": 8150
+    }
+  ],
+  "summary": {
+    "total_adaptations": 1,
+    "successful_adaptations": 1,
+    "success_rate": 1.0,
+    "pre_build_failures": 0,
+    "pom_fixes_applied": 0,
+    "initial_build_failures": 1,
+    "llm_usage_count": 1,
+    "classification_distribution": {
+      "Type-3": 1
+    },
+    "success_by_attempt": {
+      "3": 1
+    },
+    "error_type_distribution": {},
+    "average_execution_time_seconds": 110.2864031791687,
+    "max_execution_time_seconds": 110.2864031791687,
+    "min_execution_time_seconds": 110.2864031791687,
+    "direct_applicable_count": 0,
+    "direct_applicable_rate": 0.0
+  },
+  "generated_at": "2025-09-20T18:03:15.972801"
+}

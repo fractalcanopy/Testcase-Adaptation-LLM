@@ -1,5 +1,6 @@
 import subprocess
 import os
+from .utils import parse_maven_error
 
 
 def detect_build_system(project_dir: str) -> str:
@@ -156,57 +157,74 @@ def invoke_build(project_dir: str, build_system: str = None, command: list = Non
 
 
 if __name__ == "__main__":
-    # --- Test with Project A (should succeed) ---
-    project_a_path = os.path.join(
-        "..", "dummy_java_projects", "ProjectA"
-    )  # Adjust path if running from src/
-    # If create_dummy_projects.py is in the root, and this script is in src/, then:
-    project_a_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "dummy_java_projects", "ProjectA")
+    use_dummy_projects = False  # Set to False to use real projects
+
+    return_code, stdout, stderr = invoke_maven_build(
+        "data/projects/rewrite", command=["mvn", "clean", "test-compile"]
     )
 
-    print(f"--- Building Project A ({project_a_path}) ---")
-    return_code_a, stdout_a, stderr_a = invoke_build(project_a_path)
+    filtered_error = parse_maven_error(stdout)
+    print(f"Filtered Error: {filtered_error}")
+    # Print last 500 chars of STDOUT
 
-    print(f"Project A Return Code: {return_code_a}")
-    print("Project A STDOUT:")
-    print(stdout_a[-500:])  # Print last 500 chars of STDOUT
-    if return_code_a != 0:
-        print("Project A STDERR:")
-        print(stderr_a)
-    print("-" * 30)
+    if use_dummy_projects:
+        # --- Test with Project A (should succeed) ---
+        project_a_path = os.path.join(
+            "..", "dummy_java_projects", "ProjectA"
+        )  # Adjust path if running from src/
+        # If create_dummy_projects.py is in the root, and this script is in src/, then:
+        project_a_path = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__), "..", "dummy_java_projects", "ProjectA"
+            )
+        )
 
-    # --- Test with Project B (should fail compilation) ---
-    project_b_path = os.path.join(
-        "..", "dummy_java_projects", "ProjectB"
-    )  # Adjust path
-    project_b_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "dummy_java_projects", "ProjectB")
-    )
+        print(f"--- Building Project A ({project_a_path}) ---")
+        return_code_a, stdout_a, stderr_a = invoke_build(project_a_path)
 
-    print(f"--- Building Project B ({project_b_path}) ---")
-    return_code_b, stdout_b, stderr_b = invoke_build(project_b_path)
+        print(f"Project A Return Code: {return_code_a}")
+        print("Project A STDOUT:")
+        print(stdout_a[-500:])  # Print last 500 chars of STDOUT
+        if return_code_a != 0:
+            print("Project A STDERR:")
+            print(stderr_a)
+        print("-" * 30)
 
-    print(f"Project B Return Code: {return_code_b}")
-    print("Project B STDOUT (last 500 chars):")
-    print(stdout_b[-500:])
-    if return_code_b != 0:  # Expecting non-zero for Project B due to compilation error
-        print("Project B STDERR:")
-        print(stderr_b)  # This should contain the compilation error
-    print("-" * 30)
+        # --- Test with Project B (should fail compilation) ---
+        project_b_path = os.path.join(
+            "..", "dummy_java_projects", "ProjectB"
+        )  # Adjust path
+        project_b_path = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__), "..", "dummy_java_projects", "ProjectB"
+            )
+        )
 
-    # --- Test with a non-existent directory ---
-    non_existent_path = "non_existent_project"
-    print(f"--- Building Non-Existent Project ({non_existent_path}) ---")
-    return_code_ne, stdout_ne, stderr_ne = invoke_build(non_existent_path)
-    print(f"Non-Existent Project Return Code: {return_code_ne}")
-    print(f"Non-Existent Project STDERR: {stderr_ne}")
-    print("-" * 30)
+        print(f"--- Building Project B ({project_b_path}) ---")
+        return_code_b, stdout_b, stderr_b = invoke_build(project_b_path)
 
-    # --- Test with Maven not found (simulated by providing a wrong command) ---
-    # This test is more conceptual unless you temporarily rename your mvn executable
-    # print(f"--- Building with invalid Maven command ---")
-    # return_code_inv, stdout_inv, stderr_inv = invoke_maven_build(project_a_path, command=["invalid_mvn_cmd", "clean"])
-    # print(f"Invalid Command Return Code: {return_code_inv}")
-    # print(f"Invalid Command STDERR: {stderr_inv}")
-    # print("-" * 30)
+        print(f"Project B Return Code: {return_code_b}")
+        print("Project B STDOUT (last 500 chars):")
+        print(stdout_b[-500:])
+        if (
+            return_code_b != 0
+        ):  # Expecting non-zero for Project B due to compilation error
+            print("Project B STDERR:")
+            print(stderr_b)  # This should contain the compilation error
+        print("-" * 30)
+
+        # --- Test with a non-existent directory ---
+        non_existent_path = "non_existent_project"
+        print(f"--- Building Non-Existent Project ({non_existent_path}) ---")
+        return_code_ne, stdout_ne, stderr_ne = invoke_build(non_existent_path)
+        print(f"Non-Existent Project Return Code: {return_code_ne}")
+        print(f"Non-Existent Project STDERR: {stderr_ne}")
+        print("-" * 30)
+
+        # --- Test with Maven not found (simulated by providing a wrong command) ---
+        # This test is more conceptual unless you temporarily rename your mvn executable
+        # print(f"--- Building with invalid Maven command ---")
+        # return_code_inv, stdout_inv, stderr_inv = invoke_maven_build(project_a_path, command=["invalid_mvn_cmd", "clean"])
+        # print(f"Invalid Command Return Code: {return_code_inv}")
+        # print(f"Invalid Command STDERR: {stderr_inv}")
+        # print("-" * 30)

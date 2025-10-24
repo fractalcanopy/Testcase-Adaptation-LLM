@@ -1,0 +1,6 @@
+pair_id,n,k,rate,type_mode,median_time_s
+apache/maven-surefire→agudian/maven-surefire,10,10,1.0,Type-4,83.68340742588043
+daisy1754/crawljax→stefanlenselink/crawljax,10,10,1.0,Type-2,15.22929859161377
+sfcoy/arquillian-container-tomcat→ianbrandt/arquillian-container-tomcat,10,10,1.0,Type-3,52.17595338821411
+JMPerez/spotify-web-api-java→danieldisu/spotify-web-api-java,10,9,0.9,Type-2,48.15488660335541
+yiyingcanfeng/shiro-redis→leusonmario/shiro-redis,10,4,0.4,Type-2,176.2196739912033

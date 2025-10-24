@@ -36,6 +36,57 @@ Only provide the corrected build.gradle content, no additional explanation.
     return prompt
 
 
+def construct_uut_modification_prompt(
+    current_uut_code: str,
+    test_code: str,
+    parsed_build_error: str,
+    uut_class_name: str,
+) -> str:
+    """
+    Constructs a prompt for the LLM to modify the Unit Under Test (UUT) class
+    to make it compatible with the adapted test case.
+    """
+    prompt = f"""You are a Java expert tasked with modifying a Unit Under Test (UUT) class to make it compatible with a test case that is failing to compile.
+
+**Current UUT Class ({uut_class_name}):**
+```java
+{current_uut_code}
+```
+
+**Test Case Code:**
+```java
+{test_code}
+```
+
+**Build Error:**
+```
+{parsed_build_error}
+```
+
+**Task:**
+Analyze the build error and modify the UUT class to resolve the compilation issues. The test case should not be changed - only modify the UUT class to make it compatible.
+
+Common modifications you might need to make:
+1. Add missing methods that the test is trying to call
+2. Change method signatures to match what the test expects
+3. Add missing fields or constants
+4. Adjust access modifiers (public, private, protected)
+5. Add missing imports or dependencies
+6. Modify return types to match test expectations
+
+**Instructions:**
+- Only modify the UUT class, not the test
+- Preserve existing functionality where possible
+- Add minimal changes to resolve the compilation error
+- Ensure the modified class maintains good Java practices
+- Provide only the complete modified UUT class code in a code block
+
+Response should be in the format (very important):
+```java
+"""
+    return prompt
+
+
 def construct_llm_prompt(
     original_test_case_code: str,
     parsed_build_error: str,
@@ -59,8 +110,14 @@ def construct_llm_prompt(
     Returns:
         str: The constructed prompt string for the LLM.
     """
-    build_system = "Maven" if "pom.xml" in build_file_name else "Gradle" if "build.gradle" in build_file_name else "unknown"
-    
+    build_system = (
+        "Maven"
+        if "pom.xml" in build_file_name
+        else "Gradle"
+        if "build.gradle" in build_file_name
+        else "unknown"
+    )
+
     # Determine test framework from build file
     test_framework = "JUnit"
     if build_file_content:
@@ -106,13 +163,13 @@ Important considerations:
 - Maintain the same test assertions and logic where possible
 - If the target class has different method names or signatures, adapt the test accordingly
 
-Classification: Please also classify the type of adaptation needed as one of:
+Classification: Please choose exactly one type of adaptation that best describes the change, and do not combine multiple types. Select one of:
 - Type-1: Identical code (no changes needed)
 - Type-2: Renamed identifiers (method names, variable names, etc.)
 - Type-3: Added/removed statements
 - Type-4: Semantic changes (different logic/approach)
 
-Provide your response with the corrected Java test case in a ```java code block, followed by the classification.
+Provide your response with the corrected Java test case in a ```java code block (very important).
 """
     return prompt
 

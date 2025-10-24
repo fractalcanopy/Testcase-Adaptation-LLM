@@ -8,7 +8,7 @@ def test_gemini_api(gemini_api_key, prompt="Explain how AI works in simple terms
     genai.configure(api_key=gemini_api_key)
 
     # Example usage (refer to Gemini API docs)
-    model = genai.GenerativeModel("gemini-2.0-flash")  # Or other suitable model
+    model = genai.GenerativeModel("gemini-2.5-flash")  # Or other suitable model
     response = model.generate_content(prompt)
     print(response)
 
@@ -34,12 +34,14 @@ def test_perplexity_api(perplexity_api_key):
 
 if __name__ == "__main__":
     load_dotenv()
-    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    gemini_api_key = os.getenv("GEMINI_API_KEY_2")
     if not gemini_api_key:
         raise ValueError("GEMINI_API_KEY environment variable is not set.")
-    # test_gemini_api(gemini_api_key)
-
+    print("Testing Gemini API...")
+    test_gemini_api(gemini_api_key)
+    """
     perplexity_api_key = os.getenv("PERPLEXITY_API_KEY")
     if not perplexity_api_key:
         raise ValueError("PERPLEXITY_API_KEY environment variable is not set.")
     test_perplexity_api(perplexity_api_key)
+    """

@@ -1,0 +1,2 @@
+n,k,rate,ci_low,ci_high,balanced_panel_rate,balanced_panel_n,exclude_prebuild_rate,exclude_prebuild_n,worst_case_impute_galen_rate,worst_case_impute_galen_n
+84,62,0.7380952380952381,0.6351486149043319,0.8202164968422665,0.775,80,0.7560975609756098,82,0.6739130434782609,92

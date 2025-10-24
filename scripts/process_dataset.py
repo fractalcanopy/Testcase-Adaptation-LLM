@@ -10,6 +10,7 @@ sys.path.insert(0, project_root)
 
 # Import after adding project root to path
 from src.main import main as run_adaptation_workflow  # noqa: E402
+from src.main import pre_build_check  # noqa: E402
 from src.utils import get_code_from_github  # noqa: E402
 from src.metrics_tracker import global_metrics  # noqa: E402
 
@@ -23,8 +24,9 @@ def clone_repo(project_name: str, projects_base_dir: str):
         projects_base_dir (str): The base directory to clone projects into.
     """
     try:
-        repo_name = project_name.split("/")[-1]
-        target_clone_path = os.path.join(projects_base_dir, repo_name)
+        # Use full owner/repo for directory name to avoid conflicts
+        safe_project_name = project_name.replace("/", "_")
+        target_clone_path = os.path.join(projects_base_dir, safe_project_name)
         clone_url = f"https://github.com/{project_name}.git"
 
         if os.path.isdir(target_clone_path):
@@ -114,15 +116,14 @@ def extract_info_from_row(row: pd.Series) -> dict | None:
         return None
 
 
-def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
+def process_dataset(
+    file_path: str,
+    projects_base_dir: str,
+    num_rows: int = 5,
+    enable_uut_modification: bool = False,
+):
     """
     Reads the dataset CSV and processes each row to extract and format information.
-    """
-    # Set Java 8 environment before processing
-    """
-    if not set_java_8_environment():
-        print("Cannot proceed without JDK 8. Exiting.")
-        return
     """
     try:
         df = pd.read_csv(file_path, sep=";")
@@ -157,17 +158,42 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
                     continue
 
                 # 2. Determine local path for the cloned target project
-                target_repo_name = info["target_project"].split("/")[-1]
-                target_project_local_path = os.path.join(
-                    projects_base_dir, target_repo_name
+                safe_target_project_name = info["target_project"].replace("/", "_")
+                target_repo_root = os.path.join(
+                    projects_base_dir, safe_target_project_name
                 )
 
-                if not os.path.isdir(target_project_local_path):
+                if not os.path.isdir(target_repo_root):
                     print(
-                        f"Error: Target project directory not found at '{target_project_local_path}' after clone attempt. Skipping row."
+                        f"Error: Target project directory not found at '{target_repo_root}' after clone attempt. Skipping row."
                     )
                     print("-" * 20)
                     continue
+
+                # Derive module root by cutting off at the last 'src'
+                # info["target_uut_path"] is something like "core/src/main/java/…"
+                parts = info["target_uut_path"].split("/src/", 1)
+                module_subpath = parts[0]  # e.g. "core"
+                module_root = os.path.join(target_repo_root, module_subpath)
+
+                if os.path.isdir(module_root):
+                    target_project_path = module_root
+                    print(f"Using module root for build: {target_project_path}")
+                else:
+                    target_project_path = target_repo_root
+                    print(
+                        f"No nested module found, using repo root: {target_project_path}"
+                    )
+
+                # **new**: strip off the module_subpath so the class path is relative
+                if len(parts) == 2:
+                    # parts[1] is "main/java/…", re-prepend the "src/" segment
+                    class_relpath = os.path.join("src", parts[1]).replace("\\", "/")
+                else:
+                    # fallback to the full path
+                    class_relpath = info["target_uut_path"]
+
+                print(f"Resolved class_relpath under module: {class_relpath}")
 
                 # 3. Update the global metrics tracker with source project info
                 if (
@@ -183,12 +209,15 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
                 run_adaptation_workflow(
                     original_test_case_code=source_test_code,
                     source_test_origin_path=info["source_test_path"],
-                    target_project_path=target_project_local_path,
-                    target_class_relative_path=info["target_uut_path"],
+                    target_project_path=target_project_path,
+                    target_class_relative_path=class_relpath,
+                    max_attempts=3,
+                    source_project_name=info["source_project"],
+                    target_project_name=info["target_project"],
+                    cleanup_on_failure=True,
+                    enable_uut_modification=enable_uut_modification,  # <--- NEW
                 )
                 print(f"--- Finished adaptation for Row {index + 1} ---")
-                # --- End of Integration ---
-
                 print("-" * 20)
 
         # After processing all rows, save metrics and print summary
@@ -199,24 +228,74 @@ def process_dataset(file_path: str, projects_base_dir: str, num_rows: int = 5):
         global_metrics.save_results()
         global_metrics.print_summary()
 
-    except FileNotFoundError:
-        print(f"Error: Dataset file not found at '{file_path}'")
     except Exception as e:
         print(f"An error occurred: {e}")
 
 
+def filter_projects_by_prebuild(
+    input_csv: str,
+    output_csv: str,
+    projects_base_dir: str,
+    gemini_api_key: str = "",
+):
+    """
+    Reads the dataset CSV, performs a pre-build check for each target project,
+    and appends rows that compile successfully to a new CSV.
+    """
+    import pandas as pd
+    import os
+
+    df = pd.read_csv(input_csv, sep=";")
+    # Ensure output CSV exists with header
+    if not os.path.exists(output_csv):
+        df.head(0).to_csv(output_csv, sep=";", index=False)
+
+    for _, row in df.iterrows():
+        info = extract_info_from_row(row)
+        if not info:
+            continue
+
+        # ensure repo is present
+        clone_repo(info["target_project"], projects_base_dir)
+        safe_repo_name = info["target_project"].replace("/", "_")
+        local_path = os.path.join(projects_base_dir, safe_repo_name)
+        if not os.path.isdir(local_path):
+            continue
+
+        # detect build system and run pre-build check (no LLM)
+        from src.main import detect_build_system
+
+        build_system = detect_build_system(local_path)
+        return_code, _, _ = pre_build_check(
+            local_path, build_system, gemini_api_key, query_llm=False
+        )
+
+        if return_code == 0:
+            # append the entire original row
+            row.to_frame().T.to_csv(
+                output_csv, sep=";", index=False, header=False, mode="a"
+            )
+
+
 if __name__ == "__main__":
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    dataset_file = os.path.join(
-        project_root, "data", "testcaseTargetUUTPairMatching.csv"
-    )
+    dataset_file = os.path.join(project_root, "data", "A_WMUUT.csv")
     projects_dir = os.path.join(project_root, "data", "projects")
 
     # Ensure the base directory for projects exists
     os.makedirs(projects_dir, exist_ok=True)
 
     if os.path.exists(dataset_file):
-        process_dataset(dataset_file, projects_dir, num_rows=1)
+        for i in range(6):
+            process_dataset(
+                dataset_file, projects_dir, num_rows=100, enable_uut_modification=True
+            )  # Set to True to enable
+        # now filter by compile success
+        compile_csv = os.path.join(
+            project_root, "data", "testcaseTargetUUTPairMatchingSourceCompile3.csv"
+        )
+        # filter_projects_by_prebuild(dataset_file, compile_csv, projects_dir)
+
     else:
         print(f"Dataset file not found at '{dataset_file}'.")
         print("Please ensure the dataset is available at that location.")

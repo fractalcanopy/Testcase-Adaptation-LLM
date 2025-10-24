@@ -1,0 +1,2 @@
+n,k,rate,ci_low,ci_high,mean_time_s,median_time_s,uut_adaptations_total_from_summaries,uut_adaptation_rate_from_summaries
+50,43,0.86,0.738135428014719,0.9304925473797714,84.6376688861847,52.78788137435913,7,0.14
